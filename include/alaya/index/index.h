@@ -1,18 +1,9 @@
 #pragma once
 
 #include <cstdint>
-#include <cstdio>
-#include "MetricType.h"
+#include "../utils/metric_type.h"
 
-namespace azalea {
-
-/**
- * @brief Specify more comprehensive search parameters
- * 
- */
-struct SearchParameters {
-
-};
+namespace alaya {
 
 /**
  * @brief Abstract structure for an index, supports building index for vectors.
@@ -73,25 +64,6 @@ struct Index {
    */
   virtual void Load(const char* kFilePath) = 0;
 
-
-  // virtual void add(IDType n, const DistType* vec) = 0;
-
-  // DistType operator() (int data_id) const {
-  //   return 0;
-  // }
-
-  // template<typename... Types>
-  // void search(
-  //   IDType n,
-  //   const DistType* q,
-  //   IDType k,
-  //   DistType* dist,
-  //   IDType* idx,
-  //   Types... args) const {
-  //     do_search(n, q, k, dist, idx, args...);
-  // }
-
-  // virtual void do_search() const = 0;
 };
 
 } // namespace azalea
