@@ -12,10 +12,10 @@ namespace alaya {
            that need to be indexed, with the default type being int64_t.
  * @tparam DataType The data type for vector data, with the default being float.
  */
-template < typename DataType = float, typename IDType = int64_t>
+template <typename IDType = int64_t, typename DataType = float>
 struct Index {
-  int dim_;                ///< vector dimension
-  IDType num_;             ///< The total number of indexed vectors
+  int vec_dim_;                ///< vector dimension
+  IDType vec_num_;             ///< The total number of indexed vectors
   MetricType metric_type_; ///< The type of metric this index uses for index building
 
   /**
@@ -27,8 +27,8 @@ struct Index {
    */
   explicit
   Index(int dim, IDType num, MetricType metric)
-    : dim_(dim),
-      num_(num),
+    : vec_dim_(dim),
+      vec_num_(num),
       metric_type_(metric) {}
 
   virtual ~Index();
