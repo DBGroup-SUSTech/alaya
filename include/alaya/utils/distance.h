@@ -53,15 +53,25 @@ UNROLL_END
 
 UNROLL_BEGIN
 template <typename DataType>
-ALWAYS_INLINE DataType NaiveCos(const DataType* x, const DataType* y, int d) {
+DataType NaiveCos(const DataType* x, const DataType* y, int d) {
   DataType norm_x = NaiveGetNorm(x, d);
   DataType norm_y = NaiveGetNorm(x, d);
   return NaiveIp(x, y, d) / (norm_x * norm_y);
 }
 UNROLL_END
 
+UNROLL_BEGIN
 template <typename DataType>
-ALWAYS_INLINE DataType InnerProduct(const DataType* x, const DataType* y, int d) {
+void AddAssign(const DataType* kSrc, DataType* des, int dim) {
+#pragma omp simd
+  for (size_t i = 0; i < dim; ++i) {
+    des[i] += kSrc[i];
+  }
+}
+UNROLL_END
+
+template <typename DataType>
+DataType InnerProduct(const DataType* x, const DataType* y, int d) {
   if constexpr (std::is_same<DataType, float>::value) {
 #if defined(USE_AVX512F)
     return InnerProductFloatAVX512(x, y, d);
@@ -84,6 +94,48 @@ auto GetDistFunc(MetricType metric) {
   } else {
     return NaiveCos;
   }
+}
+
+template <typename DataType>
+DataType L2Sqr(const DataType* kX, const DataType* kY, int dim) {
+#if defined(USE_AVX512F)
+  return L2SqrFloatAVX512(kX, kY, dim);
+#elif defined(USE_AVX)
+  return L2SqrFloatAVX(kX, kY, dim);
+#elif defined(USE_SSE)
+  return L2SqrFloatSSE(kX, kY, dim);
+#else
+  return NaiveL2Sqr(kX, kY, dim);
+#endif
+  __builtin_unreachable();
+}
+
+template <typename DataType>
+DataType NormSqr(const DataType* kX, int dim) {
+#if defined(USE_AVX512F)
+  return NormSqrFloatAVX512(kX, dim);
+#elif defined(USE_AVX)
+  return NormSqrFloatAVX(kX, dim);
+#elif defined(USE_SSE)
+  return NormSqrFloatSSE(kX, dim);
+#else
+  return NaiveGetNorm(kX, dim);
+#endif
+  __builtin_unreachable();
+}
+
+template <typename DataType>
+DataType NormSqrT(const DataType* kX, int dim) {
+#if defined(USE_AVX512F)
+  return NormSqrTFloatAVX512(kX, dim);
+#elif defined(USE_AVX)
+  return NormSqrTFloatAVX(kX, dim);
+#elif defined(USE_SSE)
+  return NormSqrTFloatSSE(kX, dim);
+#else
+  return std::sqrt(NaiveGetNorm(kX, dim));
+#endif
+  __builtin_unreachable();
 }
 
 }  // namespace alaya
