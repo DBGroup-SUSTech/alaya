@@ -78,10 +78,10 @@ inline float AlignInnerProductFloatAVX512(const float* kX, const float* kY, int 
 
   while (kX < kEnd) {
     __m512 x512 = _mm512_loadu_ps(kX);
-    __m512 y512 = _mm512_loadu_ps(kY);
-    sum512 = _mm512_fmadd_ps(x512, y512, sum512);
     kX += 16;
+    __m512 y512 = _mm512_loadu_ps(kY);
     kY += 16;
+    sum512 = _mm512_fmadd_ps(x512, y512, sum512);
   }
   return _mm512_reduce_add_ps(sum512);
 }
@@ -144,11 +144,11 @@ inline float AlignL2SqrFloatAVX512(const float* kX, const float* kY, int dim) {
 
   while (kX < kEnd) {
     mx512 = _mm512_loadu_ps(kX);
+    kX += 16;
     my512 = _mm512_loadu_ps(kY);
+    kY += 16;
     diff512 = _mm512_sub_ps(mx512, my512);
     sum512 = _mm512_fmadd_ps(diff512, diff512, sum512);
-    kX += 16;
-    kY += 16;
   }
   return _mm512_reduce_add_ps(sum512);
 }

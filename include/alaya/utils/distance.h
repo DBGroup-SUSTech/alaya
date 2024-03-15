@@ -1,6 +1,9 @@
 #pragma once
 
+#include <bits/floatn-common.h>
+
 #include <cmath>
+#include <type_traits>
 
 #include "avx2_distance.h"
 #include "avx512_distance.h"
@@ -70,34 +73,7 @@ void AddAssign(const DataType* kSrc, DataType* des, int dim) {
 }
 UNROLL_END
 
-template <typename DataType>
-DataType InnerProduct(const DataType* x, const DataType* y, int d) {
-  if constexpr (std::is_same<DataType, float>::value) {
-#if defined(USE_AVX512F)
-    return InnerProductFloatAVX512(x, y, d);
-#elif defined(USE_AVX)
-    return InnerProductFloatAVX(x, y, d);
-#else
-    return NaiveIp(x, y, d);
-#endif
-  } else {
-    return NaiveIp(x, y, d);
-  }
-}
-
-template <typename DataType>
-auto GetDistFunc(MetricType metric) {
-  if (metric == MetricType::L2) {
-    return NaiveL2Sqr;
-  } else if (metric == MetricType::IP) {
-    return InnerProduct;
-  } else {
-    return NaiveCos;
-  }
-}
-
-template <typename DataType>
-DataType L2Sqr(const DataType* kX, const DataType* kY, int dim) {
+ALWAYS_INLINE float L2SqrFloat(const float* kX, const float* kY, int dim) {
 #if defined(USE_AVX512F)
   return L2SqrFloatAVX512(kX, kY, dim);
 #elif defined(USE_AVX)
@@ -110,8 +86,46 @@ DataType L2Sqr(const DataType* kX, const DataType* kY, int dim) {
   __builtin_unreachable();
 }
 
-template <typename DataType>
-DataType NormSqr(const DataType* kX, int dim) {
+ALWAYS_INLINE float AlignL2SqrFloat(const float* kX, const float* kY, int dim) {
+#if defined(USE_AVX512F)
+  return AlignL2SqrFloatAVX512(kX, kY, dim);
+#elif defined(USE_AVX)
+  return AlignL2SqrFloatAVX(kX, kY, dim);
+#elif defined(USE_SSE)
+  return AlignL2SqrFloatSSE(kX, kY, dim);
+#else
+  return NaiveL2Sqr(kX, kY, dim);
+#endif
+  __builtin_unreachable();
+}
+
+ALWAYS_INLINE float InnerProductFloat(const float* kX, const float* kY, int dim) {
+#if defined(USE_AVX512F)
+  return InnerProductFloatAVX512(kX, kY, dim);
+#elif defined(USE_AVX)
+  return InnerProductFloatAVX(kX, kY, dim);
+#elif defined(USE_SSE)
+  return InnerProductFloatSSE(kX, kY, dim);
+#else
+  return NaiveIp(kX, kY, dim);
+#endif
+  __builtin_unreachable();
+}
+
+ALWAYS_INLINE float AlignInnerProductFloat(const float* kX, const float* kY, int dim) {
+#if defined(USE_AVX512F)
+  return AlignInnerProductFloatAVX512(kX, kY, dim);
+#elif defined(USE_AVX)
+  return AlignInnerProductFloatAVX(kX, kY, dim);
+#elif defined(USE_SSE)
+  return AlignInnerProductFloatSSE(kX, kY, dim);
+#else
+  return NaiveIp(kX, kY, dim);
+#endif
+  __builtin_unreachable();
+}
+
+ALWAYS_INLINE float NormSqrFloat(const float* kX, int dim) {
 #if defined(USE_AVX512F)
   return NormSqrFloatAVX512(kX, dim);
 #elif defined(USE_AVX)
@@ -124,8 +138,7 @@ DataType NormSqr(const DataType* kX, int dim) {
   __builtin_unreachable();
 }
 
-template <typename DataType>
-DataType NormSqrT(const DataType* kX, int dim) {
+ALWAYS_INLINE float NormSqrTFloat(const float* kX, int dim) {
 #if defined(USE_AVX512F)
   return NormSqrTFloatAVX512(kX, dim);
 #elif defined(USE_AVX)
@@ -133,9 +146,57 @@ DataType NormSqrT(const DataType* kX, int dim) {
 #elif defined(USE_SSE)
   return NormSqrTFloatSSE(kX, dim);
 #else
-  return std::sqrt(NaiveGetNorm(kX, dim));
+  return NaiveGetNorm(kX, dim);
 #endif
   __builtin_unreachable();
+}
+
+template <typename DataType>
+DataType InnerProduct(const DataType* kX, const DataType* kY, int dim) {
+  if constexpr (std::is_same<DataType, float>::value) {
+    return InnerProductFloat(kX, kY, dim);
+  } else {
+    return NaiveIp(kX, kY, dim);
+  }
+}
+
+template <typename DataType>
+DataType L2Sqr(const DataType* kX, const DataType* kY, int dim) {
+  if constexpr (std::is_same<DataType, float>::value) {
+    return L2SqrFloat(kX, kY, dim);
+  } else {
+    return NaiveL2Sqr(kX, kY, dim);
+  }
+}
+
+template <typename DataType>
+DataType AlignL2Sqr(const DataType* kX, const DataType* kY, int dim) {
+  if constexpr (std::is_same<DataType, float>::value) {
+    return AlignL2SqrFloat(kX, kY, dim);
+  } else {
+    return NaiveL2Sqr(kX, kY, dim);
+  }
+}
+
+template <typename DataType, bool IsAlign>
+auto GetDistFunc(MetricType metric) {
+  if constexpr (IsAlign == false) {
+    if (metric == MetricType::L2) {
+      return L2Sqr;
+    } else if (metric == MetricType::IP) {
+      return InnerProduct;
+    } else {
+      return NaiveCos;
+    }
+  } else {
+    if (metric == MetricType::L2) {
+      return AlignL2Sqr;
+    } else if (metric == MetricType::IP) {
+      return AlignInnerProductFloat;
+    } else {
+      return NaiveCos;
+    }
+  }
 }
 
 }  // namespace alaya
