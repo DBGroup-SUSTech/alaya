@@ -1,6 +1,6 @@
 #pragma once
 
-#include "quant.h"
+#include "quantizer.h"
 
 namespace alaya {
 
@@ -9,4 +9,4 @@ struct SQ : Quantizer<IDType, CodeType, DistType> {
   SQ() = default;
 };
 
-} // namespace azalea
+}  // namespace alaya
