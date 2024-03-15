@@ -61,7 +61,12 @@ inline __m128i MaskedReadInt(const std::size_t dim, const int* data) {
  * @return The sum of the four float in the vector.
  */
 inline float ReduceAddF32x4(__m128 x) {
-  //  __m128 h64 = _mm_unpackhi_ps(x, x);
+  // __m128 shuf = _mm_movehdup_ps(x);  // broadcast elements 3,1 to 2,0
+  // __m128 sums = _mm_add_ps(x, shuf);
+  // shuf = _mm_movehl_ps(shuf, sums);  // high half -> low half
+  // sums = _mm_add_ss(sums, shuf);
+  // return _mm_cvtss_f32(sums);
+
   __m128 h64 = _mm_shuffle_ps(x, x, _MM_SHUFFLE(1, 0, 3, 2));
   __m128 sum64 = _mm_add_ps(h64, x);
   __m128 h32 = _mm_shuffle_ps(sum64, sum64, _MM_SHUFFLE(0, 1, 2, 3));
@@ -182,9 +187,6 @@ UNROLL_END
  */
 UNROLL_BEGIN
 inline float NormSqrFloatSSE(const float* pV, int dim) {
-  // float* pV = (float*)pVec;
-  // std::size_t dim = *((std::size_t*)dim_ptr);
-
   __m128 res128 = _mm_setzero_ps();
   __m128 x128;
 
@@ -212,6 +214,32 @@ UNROLL_END
  */
 inline float NormSqrTFloatSSE(const float* pV, int dim) {
   return std::sqrt(NormSqrFloatSSE(pV, dim));
+}
+
+/**
+ * Calculates the squared Euclidean norm of a align float array using SSE instructions.
+ *
+ * @param pV Pointer to the float array.
+ * @param dim The dimension of the array.
+ * @return The squared Euclidean norm of the array.
+ */
+UNROLL_BEGIN
+inline float AlignNormSqrFloatSSE(const float* pV, int dim) {
+  __m128 res128 = _mm_setzero_ps();
+  __m128 x128;
+
+  const float* pEnd = pV + dim;
+  while (pV < pEnd) {
+    x128 = _mm_loadu_ps(pV);
+    res128 = _mm_fmadd_ps(x128, x128, res128);
+    pV += 4;
+  }
+  return ReduceAddF32x4(res128);
+}
+UNROLL_END
+
+inline float AlignNormSqrTFloatSSE(const float* pV, int dim) {
+  return std::sqrt(AlignNormSqrFloatSSE(pV, dim));
 }
 
 }  // namespace alaya
