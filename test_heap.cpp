@@ -430,6 +430,10 @@ void test_LinearPool() {
     printf("%0.4lfs\n", (double)(finish - start) / CLOCKS_PER_SEC);
   }
 }
+void test_ResultPool() {
+  alaya::ResultPool<int, int> h(100, 50, 50);
+  h.Insert(1, 1);
+}
 int main() {
   test_Bitset();
   test_MaxHeap();

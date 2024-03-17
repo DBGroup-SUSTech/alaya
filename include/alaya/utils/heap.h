@@ -243,11 +243,11 @@ struct ResultPool {
   ResultPool(int n, int capacity, int k) : 
     n_(n), capacity_(capacity), k_(k), 
     result_(k), candidate_(capacity), vis_(n) {}
-  bool Insert(IDType u, DistType dis_) {
-    result_.push(u, dis_);
-    return candidate_.Push(u, dis_);
+  bool Insert(IDType u, DistType dis) {
+    result_.Push(u, dis);
+    return candidate_.Push(u, dis);
   }
-  IDType Pop() { return candidate_.pop_min(); }
+  IDType Pop() { return candidate_.PopMin(); }
   bool HasNext() const { return candidate_.size_ > 0; }
   IDType ID(int i) const { return result_.pool_[i].id_; }
   int Capacity() const { return capacity_; }
