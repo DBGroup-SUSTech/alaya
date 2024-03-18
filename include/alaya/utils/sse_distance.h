@@ -147,6 +147,24 @@ inline float L2SqrFloatSSE(const float* kX, const float* kY, int dim) {
 }
 UNROLL_END
 
+UNROLL_BEGIN
+inline float AlignL2SqrFloatSSE(const float* kX, const float* kY, int dim) {
+  __m128 sum128 = _mm_setzero_ps();
+
+  const float* kEnd = kX + dim;
+
+  while (kX < kEnd) {
+    __m128 x128 = _mm_loadu_ps(kX);
+    kX += 4;
+    __m128 y128 = _mm_loadu_ps(kY);
+    kY += 4;
+    __m128 diff128 = _mm_sub_ps(x128, y128);
+    sum128 = _mm_fmadd_ps(diff128, diff128, sum128);
+  }
+  return ReduceAddF32x4(sum128);
+}
+UNROLL_END
+
 /**
  * Calculates the inner product of two float arrays using SSE instructions.
  *
@@ -172,6 +190,23 @@ inline float InnerProductFloatSSE(const float* kX, const float* kY, int dim) {
   if (dim > 0) {
     x128 = MaskedReadFloat(dim, kX);
     y128 = MaskedReadFloat(dim, kY);
+    sum128 = _mm_fmadd_ps(x128, y128, sum128);
+  }
+  return ReduceAddF32x4(sum128);
+}
+UNROLL_END
+
+UNROLL_BEGIN
+inline float AlignInnerProductFloatSSE(const float* kX, const float* kY, int dim) {
+  __m128 sum128 = _mm_setzero_ps();
+
+  const float* kEnd = kX + dim;
+
+  while (kX < kEnd) {
+    __m128 x128 = _mm_loadu_ps(kX);
+    kX += 4;
+    __m128 y128 = _mm_loadu_ps(kY);
+    kY += 4;
     sum128 = _mm_fmadd_ps(x128, y128, sum128);
   }
   return ReduceAddF32x4(sum128);

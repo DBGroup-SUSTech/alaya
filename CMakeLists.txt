@@ -25,7 +25,7 @@ find_package(OpenMP REQUIRED)
 add_library(alaya
     STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/kmeans.cpp
-        include/alaya/utils/heap.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/random_utils.cpp
 )
 target_link_libraries(alaya
     PUBLIC
@@ -39,8 +39,10 @@ target_include_directories(alaya
 
 include_directories(src)
 
-#add_executable(test_main test_main.cpp)
-#target_link_libraries(test_main alaya)
 
 add_executable(test_heap test_heap.cpp)
 target_link_libraries(test_heap alaya)
+
+# add_executable(test_main test_main.cpp)
+# target_link_libraries(test_main alaya)
+
