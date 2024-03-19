@@ -216,6 +216,10 @@ inline float NormSqrFloatAVX(const float* kX, int dim) {
 }
 UNROLL_END
 
+inline float NormSqrTFloatAVX(const float* kX, int dim) {
+  return std::sqrt(NormSqrFloatAVX(kX, dim));
+}
+
 UNROLL_BEGIN
 inline float AlignNormSqrFloatAVX(const float* pV, int dim) {
   __m256 sum256 = _mm256_setzero_ps();

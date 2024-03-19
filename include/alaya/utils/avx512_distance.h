@@ -78,10 +78,10 @@ inline float AlignInnerProductFloatAVX512(const float* kX, const float* kY, int 
 
   while (kX < kEnd) {
     __m512 x512 = _mm512_loadu_ps(kX);
-    __m512 y512 = _mm512_loadu_ps(kY);
-    sum512 = _mm512_fmadd_ps(x512, y512, sum512);
     kX += 16;
+    __m512 y512 = _mm512_loadu_ps(kY);
     kY += 16;
+    sum512 = _mm512_fmadd_ps(x512, y512, sum512);
   }
   return _mm512_reduce_add_ps(sum512);
 }
@@ -144,18 +144,18 @@ inline float AlignL2SqrFloatAVX512(const float* kX, const float* kY, int dim) {
 
   while (kX < kEnd) {
     mx512 = _mm512_loadu_ps(kX);
+    kX += 16;
     my512 = _mm512_loadu_ps(kY);
+    kY += 16;
     diff512 = _mm512_sub_ps(mx512, my512);
     sum512 = _mm512_fmadd_ps(diff512, diff512, sum512);
-    kX += 16;
-    kY += 16;
   }
   return _mm512_reduce_add_ps(sum512);
 }
 UNROLL_END
 
 UNROLL_BEGIN
-inline float NormSqrtFloatAVX512(const float* kX, int dim) {
+inline float NormSqrFloatAVX512(const float* kX, int dim) {
   __m512 sum512 = _mm512_setzero_ps();
   __m512 x512;
 
@@ -186,8 +186,12 @@ inline float NormSqrtFloatAVX512(const float* kX, int dim) {
 }
 UNROLL_END
 
+inline float NormSqrTFloatAVX512(const float* kX, int dim) {
+  return std::sqrt(NormSqrFloatAVX512(kX, dim));
+}
+
 UNROLL_BEGIN
-inline float AlignNormSqrtFloatAVX512(const float* pV, int dim) {
+inline float AlignNormSqrFloatAVX512(const float* pV, int dim) {
   __m512 sum512 = _mm512_setzero_ps();
   __m512 x512;
 
@@ -201,8 +205,8 @@ inline float AlignNormSqrtFloatAVX512(const float* pV, int dim) {
 }
 UNROLL_END
 
-inline float AlignNormSqrtTFloatAVX512(const float* pV, int dim) {
-  return std::sqrt(AlignNormSqrtFloatAVX512(pV, dim));
+inline float AlignNormSqrTFloatAVX512(const float* pV, int dim) {
+  return std::sqrt(AlignNormSqrFloatAVX512(pV, dim));
 }
 
 }  // namespace alaya
