@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include "../include/index.h"
+#include "../index/index.h"
 // #include "index/graph/graph.h"
 // #include "index/quant/quant.h"
 // #include "index/bucket/bucket.h"

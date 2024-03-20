@@ -39,5 +39,5 @@ target_include_directories(alaya
 
 include_directories(src)
 
-# add_executable(test_main test_main.cpp)
-# target_link_libraries(test_main alaya)
+ add_executable(test_main test_main.cpp)
+ target_link_libraries(test_main alaya)
