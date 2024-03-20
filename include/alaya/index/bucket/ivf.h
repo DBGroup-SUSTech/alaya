@@ -171,18 +171,20 @@ struct InvertedList : Bucket<IDType, DataType> {
   }
 
   // index file structure:
-  // data_num_ --- data_dim_ --- bucket_num_ --- all centroids ... --- each bucket_size_ --- node_id
-  // in each bucket
-  // ---  data in each bucket
-  //
+  // metadata:   | data_num_ | data_dim_ | bucket_num_ |
+  // centroids:  | centroid0 | centroid1 | centroid2 | ...
+  // buckets:
+  // | bucket0 size_ |  point ids in 0 | data in 0
+  // | bucket1 size_ |  point ids in 1 | data in 1
+  // ...
 
   /**
    * @brief Save the built index to file
    *
-   * @param k_path  file path
+   * @param kPath  file path
    */
-  void Save(const char* k_path) override {
-    std::ofstream output(k_path, std::ios::binary);
+  void Save(const char* kPath) override {
+    std::ofstream output(kPath, std::ios::binary);
     if (!output.is_open()) {
       throw std::runtime_error("Cannot open file");
     }
@@ -212,10 +214,10 @@ struct InvertedList : Bucket<IDType, DataType> {
   /**
    * @brief Load the built index from file
    *
-   * @param k_path  file path
+   * @param kPath  file path
    */
-  void Load(const char* k_path) override {
-    std::ifstream input(k_path, std::ios::binary);
+  void Load(const char* kPath) override {
+    std::ifstream input(kPath, std::ios::binary);
     if (!input.is_open()) {
       throw std::runtime_error("Cannot open file");
     }
