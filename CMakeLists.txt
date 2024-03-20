@@ -60,7 +60,7 @@ target_link_libraries(distance_test alaya GTest::gtest_main)
 
 add_executable(
   hello_test
-  tests/hello_test.cc
+  tests/hello_test.cpp
 )
 target_link_libraries(
   hello_test
