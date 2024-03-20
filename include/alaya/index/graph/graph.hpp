@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "alaya/index/graph/hnsw/HNSWInitializer.hpp"
-#include "alaya/index/graph/memory.hpp"
+#include "alaya/utils/memory.h"
 
 namespace glass {
 

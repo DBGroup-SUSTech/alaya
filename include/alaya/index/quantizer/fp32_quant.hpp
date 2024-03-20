@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../common.hpp"
-#include "../memory.hpp"
-#include "../simd/distance.hpp"
+#include "alaya/utils/common.hpp"
+#include "alaya/utils/memory.h"
+#include "alaya/utils/simd/distance.hpp"
 
 namespace glass {
 

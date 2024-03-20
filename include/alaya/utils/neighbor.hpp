@@ -9,7 +9,7 @@
 #include <queue>
 #include <vector>
 
-#include "alaya/index/graph/memory.hpp"
+#include "alaya/utils/memory.h"
 
 namespace glass {
 

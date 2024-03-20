@@ -2,11 +2,11 @@
 
 #include <cmath>
 
-#include "../common.hpp"
-#include "../memory.hpp"
-#include "../neighbor.hpp"
-#include "../simd/distance.hpp"
-#include "fp32_quant.hpp"
+#include "alaya/utils/common.hpp"
+#include "alaya/utils/memory.h"
+#include "alaya/utils/neighbor.hpp"
+#include "alaya/utils/simd/distance.hpp"
+#include "alaya/index/quantizer/fp32_quant.hpp"
 
 namespace glass {
 

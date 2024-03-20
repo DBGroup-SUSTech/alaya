@@ -3,11 +3,11 @@
 #include <chrono>
 #include <memory>
 
-#include "../builder.hpp"
-#include "../hnswlib/hnswalg.h"
-#include "../hnswlib/hnswlib.h"
-#include "../hnswlib/space_ip.h"
-#include "../hnswlib/space_l2.h"
+#include "alaya/index/graph/builder.hpp"
+#include "alaya/index/graph/hnswlib/hnswalg.h"
+#include "alaya/index/graph/hnswlib/hnswlib.h"
+#include "alaya/index/graph/hnswlib/space_ip.h"
+#include "alaya/index/graph/hnswlib/space_l2.h"
 #include "HNSWInitializer.hpp"
 #include "alaya/index/graph/graph.hpp"
 #include "alaya/utils/common.hpp"

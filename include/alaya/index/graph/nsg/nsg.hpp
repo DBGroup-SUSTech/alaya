@@ -4,10 +4,11 @@
 #include <random>
 #include <stack>
 
-#include "../builder.hpp"
+#include "alaya/index/graph/builder.hpp"
 #include "alaya/index/graph/graph.hpp"
 #include "alaya/utils/neighbor.hpp"
 #include "alaya/utils/utils.hpp"
+#include "alaya/index/index.h"
 #include "nndescent.hpp"
 
 namespace glass {
@@ -429,3 +430,64 @@ struct NSG : public Builder {
 };
 
 } // namespace glass
+
+namespace alaya {
+
+template <typename Quantizer, typename IDType = int64_t, typename DataType = float>
+struct NSG : public Index<int,float> {
+  glass::Graph<int> graph;
+  Quantizer quant;
+//  Index<int, float> quantizer;
+  glass::NSG builder;
+
+  // Search parameters
+  int ef = 32;
+
+  // Memory prefetch parameters
+  int po = 1;
+  int pl = 1;
+
+  // Optimization parameters
+  constexpr static int kOptimizePoints = 1000;
+  constexpr static int kTryPos = 10;
+  constexpr static int kTryPls = 5;
+  constexpr static int kTryK = 10;
+  int sample_points_num;
+  std::vector<float> optimize_queries;
+  const int graph_po;
+
+  explicit NSG(int dim, const std::string &metric, int R = 32, int L = 200):Index<IDType, DataType>(dim, 0, metric),
+      builder(dim,metric,R,L),quantizer(){};
+
+  void BuildIndex(IDType vec_num, const DataType* kVecData) override {
+    this->vec_num_ = vec_num;
+    builder.Build(kVecData, vec_num);
+//    graph = builder.GetGraph();
+
+    quant = Quantizer(this->vec_dim_);
+    quant.train(kVecData, vec_num);
+
+    sample_points_num = std::min(kOptimizePoints, this->vec_num_ - 1);
+    std::vector<int> sample_points(sample_points_num);
+    std::mt19937 rng;
+    GenRandom(rng, sample_points.data(), sample_points_num, this->vec_num_);
+    optimize_queries.resize(sample_points_num * this->vec_dim_);
+    for (int i = 0; i < sample_points_num; ++i) {
+      memcpy(optimize_queries.data() + i * this->vec_dim_, kVecData + sample_points[i] * this->vec_dim_,
+             this->vec_dim_ * sizeof(float));
+    }
+  }
+
+  void Save(const char* kFilePath) const override {
+    builder.final_graph.save("");
+    // todo: save sampled points and quant
+  }
+
+  void Load(const char* kFilePath) override {
+    builder.final_graph.load("");
+    // todo: load sampled points and quant
+  }
+
+};
+
+}  // namespace alaya
