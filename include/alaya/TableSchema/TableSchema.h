@@ -25,7 +25,7 @@ struct TableSchema
      * @param des Description of the table
      * @param db_id father database of the table
      */
-    TableSchema(std::string table_name, int dim, char *des = NULL, int db_id) : table_name_(table_name), dim_(dim), des_(des), db_id_(db_id);
+    TableSchema(std::string table_name, int dim, char *des = NULL, int db_id) : table_name_(table_name), dim_(dim), des_(des), db_id_(db_id){}
     ~TableSchema() {}
     /**
      * @brief Function to add an index to the table
