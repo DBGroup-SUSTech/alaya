@@ -30,7 +30,7 @@ struct InvertedListSearcher : Searcher<InvertedList<IDType, DataType>, DataType>
   void Search(int64_t query_dim, DataType* query, int64_t k, DataType* distances,
               int64_t* labels) override {
     // query_num_ = query_num;
-    // ResultPool<IDType, DataType> res(query_dim, 2 * k, k);
+    ResultPool<IDType, DataType> res(index_->data_num_, 2 * k, k);
     assert(query_dim == index_->data_dim_ && "Query dimension must be equal to data dimension.");
     query_dim_ = query_dim;
     query_ = query;
@@ -47,6 +47,11 @@ struct InvertedListSearcher : Searcher<InvertedList<IDType, DataType>, DataType>
         DataType dist = DistFunc(query_, data_point + j * query_dim_, query_dim_);
         res.Insert(id_list[j], dist);
       }
+    }
+
+    for (int i = 0; i < k; ++i) {
+      distances_[i] = res.result_.pool_[i].dis;
+      std::cout << res.result_.pool_[i].id << " " << res.result_.pool_[i].dis << std::endl;
     }
   }
   void InitSearcher(DataType* query) {

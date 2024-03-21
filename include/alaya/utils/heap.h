@@ -1,7 +1,5 @@
 #pragma once
 
-#pragma once
-
 #include <alaya/utils/memory.h>
 
 #include <iostream>

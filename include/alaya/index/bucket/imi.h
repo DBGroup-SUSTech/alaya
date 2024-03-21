@@ -1,6 +1,5 @@
 #pragma once
 #include <alaya/index/bucket/ivf.h>
-#include <alaya/index/bucket/multitable.h>
 #include <alaya/utils/metric_type.h>
 
 #include <boost/algorithm/string.hpp>

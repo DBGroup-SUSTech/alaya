@@ -66,6 +66,16 @@ target_link_libraries(
   hello_test
   GTest::gtest_main
 )
+#TODO delete this
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+add_executable(
+  pool_test
+  tests/pool_test.cpp
+)
+target_link_libraries(
+  pool_test
+  GTest::gtest_main
+)
 
 include(GoogleTest)
 gtest_discover_tests(distance_test)

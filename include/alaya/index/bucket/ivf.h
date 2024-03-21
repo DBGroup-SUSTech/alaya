@@ -1,5 +1,4 @@
 #pragma once
-
 #include <alaya/index/bucket/bucket.h>
 #include <alaya/utils/distance.h>
 #include <alaya/utils/memory.h>
