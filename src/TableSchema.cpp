@@ -1,6 +1,7 @@
 #include <alaya/TableSchema/TableSchema.h>
 #include <sstream>
 #include <sqlite3.h>
+#include <cstring>
 
 namespace alaya {
 
@@ -14,7 +15,7 @@ namespace alaya {
  */
 
 
-TableSchema::TableSchema(std::string table_name, int dim, char *des = NULL, int db_id){
+TableSchema::TableSchema(std::string table_name, int dim, char *des, int db_id) : table_name_(table_name), dim_(dim), des_(des), db_id_(db_id){
     sqlite3 *db;
     const char *dir = "sqluser.db";
     int rc = 0;
@@ -38,9 +39,8 @@ TableSchema::TableSchema(std::string table_name, int dim, char *des = NULL, int 
         fprintf(stdout, "insert done\n");
     sqlite3_finalize(stmt);
     sqlite3_close(db);
+    return ;
 }
-
-TableSchema::~TableSchema() {}
 
 /**
  * @brief Function to add an index to the table
