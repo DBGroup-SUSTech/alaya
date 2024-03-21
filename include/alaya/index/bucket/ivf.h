@@ -25,6 +25,7 @@ struct InvertedList : Bucket<IDType, DataType> {
   DataType* data_ = nullptr;              // input vector base data
   int clustering_iter_;                   // max kmeans iterations
   std::vector<int> nearest_centroid_id_;  // nearest_centroid_id_
+  DataType centroids_data_ = nullptr;     // centroid data ptr
 
   std::vector<std::vector<float>>
       centroids_;  // array for centroids, each centroids data is stored in one dimension
@@ -120,6 +121,12 @@ struct InvertedList : Bucket<IDType, DataType> {
 
     FillIndex();
 
+    centroids_data_ = new DataType[bucket_num_ * data_dim_];
+#pragma omp parallel for
+    for (size_t i = 0; i < bucket_num_; ++i) {
+      std::copy(centroids_[i].begin(), centroids_[i].end(), centroids_data_ + i * data_dim_);
+    }
+
     order_list_.resize(bucket_num_);
     printf("[Report] - build data bucket complete!\n");
   }
@@ -155,6 +162,8 @@ struct InvertedList : Bucket<IDType, DataType> {
 
     FillIndex();
 
+    centroids_data_ = new DataType[bucket_num_ * data_dim_];
+
 // replace ids with actual ids
 #pragma omp parallel for
     for (int i = 0; i < bucket_num_; ++i) {
@@ -162,6 +171,7 @@ struct InvertedList : Bucket<IDType, DataType> {
         IDType fake_id = id_buckets_[i][j];
         id_buckets_[i][j] = *(data_ids + fake_id);
       }
+      std::copy(centroids_[i].begin(), centroids_[i].end(), centroids_data_ + i * data_dim_);
     }
 
     order_list_.resize(bucket_num_);
@@ -183,7 +193,7 @@ struct InvertedList : Bucket<IDType, DataType> {
    *
    * @param kPath  file path
    */
-  void Save(const char* kPath) override {
+  void Save(const char* kPath) const override {
     std::ofstream output(kPath, std::ios::binary);
     if (!output.is_open()) {
       throw std::runtime_error("Cannot open file");
@@ -244,6 +254,12 @@ struct InvertedList : Bucket<IDType, DataType> {
       input.read((char*)&each_bucket_size, sizeof(uint32_t));
       input.read((char*)id_buckets_[i].data(), sizeof(IDType) * each_bucket_size);
       input.read((char*)buckets_[i].data(), sizeof(DataType) * each_bucket_size * data_dim_);
+    }
+
+    centroids_data_ = new DataType[bucket_num_ * data_dim_];
+#pragma omp parallel for
+    for (size_t i = 0; i < bucket_num_; ++i) {
+      std::copy(centroids_[i].begin(), centroids_[i].end(), centroids_data_ + i * data_dim_);
     }
 
     printf("[Report] - reading index complete!\n");

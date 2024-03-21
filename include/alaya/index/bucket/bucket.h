@@ -29,7 +29,7 @@ struct Bucket : Index<IDType, DataType> {
   virtual void BuildIndexWithIds(IDType data_num, const IDType* data_ids,
                                  const DataType* data_ptr) {}
 
-  virtual void Save(const char* k_path) = 0;
+  virtual void Save(const char* k_path) const = 0;
   virtual void Load(const char* k_path) = 0;
 };
 
