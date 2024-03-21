@@ -2,6 +2,7 @@
 
 #include <alaya/index/bucket/bucket.h>
 #include <alaya/utils/distance.h>
+#include <alaya/utils/memory.h>
 #include <alaya/utils/metric_type.h>
 
 #include <cassert>
@@ -121,7 +122,7 @@ struct InvertedList : Bucket<IDType, DataType> {
 
     FillIndex();
 
-    centroids_data_ = new DataType[bucket_num_ * data_dim_];
+    centroids_data_ = Alloc64B(bucket_num_ * data_dim_ * sizeof(DataType));
 #pragma omp parallel for
     for (size_t i = 0; i < bucket_num_; ++i) {
       std::copy(centroids_[i].begin(), centroids_[i].end(), centroids_data_ + i * data_dim_);
@@ -162,7 +163,7 @@ struct InvertedList : Bucket<IDType, DataType> {
 
     FillIndex();
 
-    centroids_data_ = new DataType[bucket_num_ * data_dim_];
+    centroids_data_ = Alloc64B(bucket_num_ * data_dim_ * sizeof(DataType));
 
 // replace ids with actual ids
 #pragma omp parallel for
@@ -256,7 +257,7 @@ struct InvertedList : Bucket<IDType, DataType> {
       input.read((char*)buckets_[i].data(), sizeof(DataType) * each_bucket_size * data_dim_);
     }
 
-    centroids_data_ = new DataType[bucket_num_ * data_dim_];
+    centroids_data_ = Alloc64B(bucket_num_ * data_dim_ * sizeof(DataType));
 #pragma omp parallel for
     for (size_t i = 0; i < bucket_num_; ++i) {
       std::copy(centroids_[i].begin(), centroids_[i].end(), centroids_data_ + i * data_dim_);

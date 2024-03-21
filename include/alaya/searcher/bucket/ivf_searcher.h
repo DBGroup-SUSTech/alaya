@@ -2,7 +2,8 @@
 
 #include <alaya/index/bucket/ivf.h>
 #include <alaya/searcher/searcher.h>
-#include <alaya/utils/distances.h>
+#include <alaya/utils/distance.h>
+#include <alaya/utils/heap.h>
 #include <alaya/utils/memory.h>
 
 #include <cstdint>
@@ -29,6 +30,7 @@ struct InvertedListSearcher : Searcher<InvertedList<IDType, DataType>, DataType>
   void Search(int64_t query_dim, DataType* query, int64_t k, DataType* distances,
               int64_t* labels) override {
     // query_num_ = query_num;
+    // ResultPool<IDType, DataType> res(query_dim, 2 * k, k);
     assert(query_dim == index_->data_dim_ && "Query dimension must be equal to data dimension.");
     query_dim_ = query_dim;
     query_ = query;
@@ -43,12 +45,7 @@ struct InvertedListSearcher : Searcher<InvertedList<IDType, DataType>, DataType>
       auto DistFunc = GetDistanceFunc(index_->metric_type_);
       for (int j = 0; j < id_list.size(); ++j) {
         DataType dist = DistFunc(query_, data_point + j * query_dim_, query_dim_);
-        if (dist < distances_[k - 1]) {
-          distances_[k - 1] = dist;
-          labels[k - 1] = id_list[j];
-          std::sort(distances_, distances_ + k_);
-          std::sort(labels, labels + k_);
-        }
+        res.Insert(id_list[j], dist);
       }
     }
   }
