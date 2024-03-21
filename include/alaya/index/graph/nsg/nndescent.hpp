@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "../simd/distance.hpp"
+#include "alaya/utils/simd/distance.hpp"
 #include "alaya/index/graph/graph.hpp"
 #include "alaya/utils/neighbor.hpp"
 #include "alaya/utils/utils.hpp"

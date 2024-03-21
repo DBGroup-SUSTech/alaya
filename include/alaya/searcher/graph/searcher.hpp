@@ -35,12 +35,12 @@ struct GraphSearcher: public Searcher<IndexType, DataType> {
     int pl = 1;
 
     // Optimization parameters
-    constexpr static int kOptimizePoints = 1000;
+//    constexpr static int kOptimizePoints = 1000;
     constexpr static int kTryPos = 10;
     constexpr static int kTryPls = 5;
     constexpr static int kTryK = 10;
     int sample_points_num;
-    std::vector<float> optimize_queries;
+    std::vector<float>& optimize_queries;
     const int graph_po;
 
 //    GraphSearcher(const IndexType& index):graph(index.builder.GetGraph),quant(index.quant) {
@@ -50,6 +50,8 @@ struct GraphSearcher: public Searcher<IndexType, DataType> {
     void SetIndex(const IndexType& index) override {
       graph = std::ref(index.builder.GetGraph);
       quant = std::ref(index.quant);
+      optimize_queries = std::ref(index.optimize_queries);
+      sample_points_num = optimize_queries.size();
     }
 
     void SetEf(int ef) override {
