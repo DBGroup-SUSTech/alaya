@@ -35,12 +35,15 @@ FetchContent_MakeAvailable(fmt)
 
 add_compile_options(-march=native)
 
+add_compile_options(-lsqlite3)
+
 find_package(OpenMP REQUIRED)
 
 add_library(alaya
   STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/kmeans.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/random_utils.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/TableSchema.cpp
 )
 target_link_libraries(alaya
   PUBLIC
