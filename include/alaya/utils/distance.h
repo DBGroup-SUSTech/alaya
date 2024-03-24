@@ -58,16 +58,16 @@ UNROLL_END
  * @param d The size of the arrays.
  * @return The inner product of the two arrays.
  */
-UNROLL_BEGIN
+// UNROLL_BEGIN
 template <typename DataType>
-ALWAYS_INLINE DataType NaiveIp(const DataType* x, const DataType* y, int d) {
+ALWAYS_INLINE inline DataType NaiveIp(const DataType* x, const DataType* y, int d) {
   DataType dist = 0;
   for (int i = 0; i < d; ++i) {
     dist += x[i] * y[i];
   }
   return dist;
 }
-UNROLL_END
+// UNROLL_END
 
 UNROLL_BEGIN
 template <typename DataType>
@@ -252,7 +252,7 @@ DataType AlignL2Sqr(const DataType* kX, const DataType* kY, int dim) {
  * @return The distance function corresponding to the specified metric.
  */
 template <typename DataType, bool IsAlign>
-auto GetDistFunc(MetricType metric) {
+DistFunc<DataType, DataType, DataType> GetDistFunc(MetricType metric) {
   if constexpr (IsAlign == false) {
     if (metric == MetricType::L2) {
       return L2Sqr;
