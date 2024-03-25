@@ -22,7 +22,7 @@ void kmeans(const float* kData, const std::size_t kDataNum, const std::size_t kD
   std::vector<std::pair<float, unsigned>> norm_id(kDataNum);
 #pragma omp parallel for
   for (size_t i = 0; i < kDataNum; ++i) {
-    norm_id[i].first = NormSqrT<float>(train[i].data(), kDataDim);
+    norm_id[i].first = NormSqrTFloat(train[i].data(), kDataDim);
     norm_id[i].second = i;
   }
   std::sort(norm_id.begin(), norm_id.end());
