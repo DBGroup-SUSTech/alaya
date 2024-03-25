@@ -40,8 +40,8 @@ target_include_directories(alaya
 include_directories(src)
 
 
-add_executable(test_heap test_heap.cpp)
-target_link_libraries(test_heap alaya)
+add_executable(test_RQ test_RQ.cpp)
+target_link_libraries(test_RQ alaya)
 
 # add_executable(test_main test_main.cpp)
 # target_link_libraries(test_main alaya)

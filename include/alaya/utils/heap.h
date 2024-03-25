@@ -4,6 +4,11 @@
 #include <alaya/utils/memory.h>
 
 namespace alaya {
+/**
+ * @brief 
+ * 
+ * @param
+ */
 struct Bitset {
   explicit Bitset(int n) : 
     kBsCnt((n + 63) / 64), kBytes(kBsCnt * 8), 
@@ -14,6 +19,11 @@ struct Bitset {
   void Set(int i) {
     bs_[i >> 6] |= uint64_t(1) << (i & 63);
   }
+  /**
+   * @brief 
+   * 
+   * @param i 
+   */
   void Reset(int i) {
     bs_[i >> 6] &= uint64_t(-1) ^ (uint64_t(1) << (i & 63));
   }
