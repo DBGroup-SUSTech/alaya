@@ -58,7 +58,7 @@ UNROLL_END
  * @param d The size of the arrays.
  * @return The inner product of the two arrays.
  */
-// UNROLL_BEGIN
+UNROLL_BEGIN
 template <typename DataType>
 ALWAYS_INLINE inline DataType NaiveIp(const DataType* x, const DataType* y, int d) {
   DataType dist = 0;
@@ -67,7 +67,7 @@ ALWAYS_INLINE inline DataType NaiveIp(const DataType* x, const DataType* y, int 
   }
   return dist;
 }
-// UNROLL_END
+UNROLL_END
 
 UNROLL_BEGIN
 template <typename DataType>
@@ -218,6 +218,15 @@ DataType InnerProduct(const DataType* kX, const DataType* kY, int dim) {
 }
 
 template <typename DataType>
+DataType AlignInnerProduct(const DataType* kX, const DataType* kY, int dim) {
+  if constexpr (std::is_same<DataType, float>::value) {
+    return AlignInnerProductFloat(kX, kY, dim);
+  } else {
+    return NaiveIp(kX, kY, dim);
+  }
+}
+
+template <typename DataType>
 DataType L2Sqr(const DataType* kX, const DataType* kY, int dim) {
   if constexpr (std::is_same<DataType, float>::value) {
     return L2SqrFloat(kX, kY, dim);
@@ -226,7 +235,6 @@ DataType L2Sqr(const DataType* kX, const DataType* kY, int dim) {
   }
 }
 
-template <typename DataType>
 /**
  * Calculates the squared L2 distance of two vectors aligned in 16 dimensions.
  *
@@ -235,6 +243,7 @@ template <typename DataType>
  * @param dim The dimension of the arrays.
  * @return The squared L2 distance between the two arrays.
  */
+template <typename DataType>
 DataType AlignL2Sqr(const DataType* kX, const DataType* kY, int dim) {
   if constexpr (std::is_same<DataType, float>::value) {
     return AlignL2SqrFloat(kX, kY, dim);
