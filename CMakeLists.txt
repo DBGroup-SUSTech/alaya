@@ -57,6 +57,12 @@ target_include_directories(alaya
 )
 
 
+add_executable(test_RQ test_RQ.cpp)
+target_link_libraries(test_RQ alaya)
+
+# add_executable(test_main test_main.cpp)
+# target_link_libraries(test_main alaya)
+
 enable_testing()
 add_executable(distance_test tests/distance_test.cpp)
 target_link_libraries(distance_test alaya GTest::gtest_main)
@@ -75,4 +81,3 @@ gtest_discover_tests(distance_test)
 gtest_discover_tests(hello_test)
 
 
-# add_subdirectory(tests)

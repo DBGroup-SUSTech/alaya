@@ -1,9 +1,11 @@
 #pragma once
 
 #include <cstdint>
-
+#include "../../utils/distance.h"
 #include "../../utils/type_utils.h"
 #include "../index.h"
+#include "../../utils/memory.h"
+#include "../../utils/kmeans.h"
 
 namespace alaya {
 
