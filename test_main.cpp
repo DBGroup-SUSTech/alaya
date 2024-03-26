@@ -26,6 +26,4 @@ int main() {
   std::string metric = "L2";
 
 
-
-
 }

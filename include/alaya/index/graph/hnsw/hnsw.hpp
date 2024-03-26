@@ -11,6 +11,7 @@
 #include "HNSWInitializer.hpp"
 #include "alaya/index/graph/graph.hpp"
 #include "alaya/utils/common.hpp"
+#include "alaya/index/index.h"
 
 namespace glass {
 
@@ -20,7 +21,7 @@ struct HNSW : public Builder {
   std::unique_ptr<hnswlib::HierarchicalNSW<float>> hnsw = nullptr;
   std::unique_ptr<hnswlib::SpaceInterface<float>> space = nullptr;
 
-  Graph<int> final_graph;
+  std::unique_ptr<Graph<int>> final_graph;
 
   HNSW(int dim, const std::string &metric, int R = 32, int L = 200)
       : dim(dim), M(R / 2), efConstruction(L) {
@@ -52,12 +53,12 @@ struct HNSW : public Builder {
     auto ed = std::chrono::high_resolution_clock::now();
     auto ela = std::chrono::duration<double>(ed - st).count();
     printf("HNSW building cost: %.2lfs\n", ela);
-    final_graph.init(nb, 2 * M);
+    final_graph->init(nb, 2 * M);
 #pragma omp parallel for
     for (int i = 0; i < nb; ++i) {
       int *edges = (int *)hnsw->get_linklist0(i);
       for (int j = 1; j <= edges[0]; ++j) {
-        final_graph.at(i, j - 1) = edges[j];
+        final_graph->at(i, j - 1) = edges[j];
       }
     }
     auto initializer = std::make_unique<HNSWInitializer>(nb, M);
@@ -75,9 +76,46 @@ struct HNSW : public Builder {
         }
       }
     }
-    final_graph.initializer = std::move(initializer);
+    final_graph->initializer = std::move(initializer);
   }
 
-  Graph<int> GetGraph() override { return final_graph; }
+  std::unique_ptr<Graph<int>> GetGraph() override {
+    auto res = std::move(final_graph);
+    final_graph = nullptr;
+    return res;
+  }
 };
 } // namespace glass
+
+namespace alaya {
+
+template <typename Quantizer, typename IDType = int64_t, typename DataType = float>
+struct HNSWimp : public Index<IDType,DataType> {
+  std::unique_ptr<glass::Graph<IDType>> graph = std::make_unique<glass::Graph<IDType>>();
+  std::unique_ptr<Quantizer> quant = std::make_unique<Quantizer>();
+  std::unique_ptr<glass::HNSW> builder = nullptr;
+
+  explicit HNSWimp(int dim, const std::string& metric, int R = 32, int L = 200):Index<IDType, DataType>(dim, 0, metric), builder(std::make_unique<glass::HNSW>(dim,metric,R,L)){};
+
+  void BuildIndex(IDType vec_num, const DataType* kVecData) override {
+    this->vec_num_ = vec_num;
+    builder->Build(kVecData, vec_num);
+    graph = builder->GetGraph();
+
+    quant = std::make_unique<Quantizer>(this->vec_dim_,this->vec_num_,this->metric_type_, 0);
+    quant->BuildIndex(this->vec_num_, kVecData);
+  }
+
+  void Save(const char* kFilePath) const override {
+    graph->save(std::string(kFilePath));
+    quant->Save(kFilePath);
+  }
+
+  void Load(const char* kFilePath) override {
+    graph->load(std::string(kFilePath));
+    quant->Load(kFilePath);
+  }
+
+};
+
+}  // namespace alaya

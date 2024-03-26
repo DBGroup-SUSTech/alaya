@@ -19,6 +19,7 @@
 
 namespace alaya {
 
+// todo: The distance calculation should be provided by the quantizer class
 template <typename Quantizer, typename DataType = float>
 struct Computer {
   std::unique_ptr<DataType[]> q;

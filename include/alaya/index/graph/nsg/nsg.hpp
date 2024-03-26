@@ -439,12 +439,12 @@ struct NSG : public Builder {
 namespace alaya {
 
 template <typename Quantizer, typename IDType = int64_t, typename DataType = float>
-struct NSG : public Index<int,float> {
+struct NSGimp : public Index<int,float> {
   std::unique_ptr<glass::Graph<IDType>> graph = std::make_unique<glass::Graph<IDType>>();
   std::unique_ptr<Quantizer> quant = std::make_unique<Quantizer>();
   std::unique_ptr<glass::NSG> builder = nullptr;
 
-  explicit NSG(int dim, const std::string& metric, int R = 32, int L = 200):Index<IDType, DataType>(dim, 0, metric), builder(std::make_unique<glass::NSG>(dim,metric,R,L)){};
+  explicit NSGimp(int dim, const std::string& metric, int R = 32, int L = 200):Index<IDType, DataType>(dim, 0, metric), builder(std::make_unique<glass::NSG>(dim,metric,R,L)){};
 
   void BuildIndex(IDType vec_num, const DataType* kVecData) override {
     this->vec_num_ = vec_num;

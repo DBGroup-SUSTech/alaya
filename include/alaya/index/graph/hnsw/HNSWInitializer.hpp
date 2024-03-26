@@ -4,7 +4,7 @@
 #include <fstream>
 #include <vector>
 
-#include "alaya/index/quantizer/quant.hpp"
+//#include "alaya/index/quantizer/quant.hpp"
 #include "alaya/utils/memory.h"
 
 namespace glass {
