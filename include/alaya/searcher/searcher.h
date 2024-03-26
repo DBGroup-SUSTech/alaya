@@ -6,7 +6,6 @@
 // #include "index/quant/quant.h"
 // #include "index/bucket/bucket.h"
 
-
 namespace alaya {
 
 /**

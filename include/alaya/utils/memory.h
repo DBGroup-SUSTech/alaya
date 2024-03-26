@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
-#include <cstring>
 #include <cstring>
 #include <stdio.h>
 #include <sys/mman.h>
@@ -17,6 +17,15 @@
 
 namespace alaya {
 
+inline constexpr uint64_t DoAlign(uint64_t val, uint64_t align) {
+  return (val + align - 1) & (~(align - 1));
+}
+
+/**
+ * Prefetches the given memory address into the L1 cache.
+ *
+ * @param address The memory address to prefetch.
+ */
 ALWAYS_INLINE
 inline void PrefetchL1(const void* address) {
 #if defined(__SSE2__)
@@ -26,6 +35,11 @@ inline void PrefetchL1(const void* address) {
 #endif
 }
 
+/**
+ * Prefetches the given memory address into the L2 cache.
+ *
+ * @param address The memory address to prefetch.
+ */
 ALWAYS_INLINE
 inline void PrefetchL2(const void* address) {
 #if defined(__SSE2__)
@@ -35,6 +49,11 @@ inline void PrefetchL2(const void* address) {
 #endif
 }
 
+/**
+ * Prefetches the given memory address into the L3 cache.
+ *
+ * @param address The memory address to prefetch.
+ */
 ALWAYS_INLINE
 inline void PrefetchL3(const void* address) {
 #if defined(__SSE2__)
@@ -44,6 +63,14 @@ inline void PrefetchL3(const void* address) {
 #endif
 }
 
+/**
+ * @brief Prefetches memory lines into the CPU cache.
+ *
+ * This function prefetches memory lines into the CPU cache to improve data access performance.
+ *
+ * @param ptr A pointer to the memory location to prefetch.
+ * @param num_lines The number of memory lines to prefetch.
+ */
 ALWAYS_INLINE
 inline void MemPrefetch(char* ptr, const int num_lines) {
   switch (num_lines) {
@@ -163,6 +190,20 @@ inline void MemPrefetch(char* ptr, const int num_lines) {
 }
 
 /**
+ * @brief Allocates memory of size `num_bytes` aligned to 64 bytes.
+ *
+ * @param num_bytes The number of bytes to allocate.
+ * @return A pointer to the allocated memory.
+ */
+ALWAYS_INLINE
+inline void* Alloc64B(std::size_t num_bytes) {
+  std::size_t len = (num_bytes + (1 << 6) - 1) >> 6 << 6;
+  auto ptr = std::aligned_alloc(64, len);
+  std::memset(ptr, 0, len);
+  return ptr;
+}
+
+/**
  * @brief Allocates a block of memory of the specified size in bytes.
  *
  * This function allocates a block of memory of the specified size in bytes.
@@ -175,20 +216,6 @@ ALWAYS_INLINE
 inline void* Alloc2M(std::size_t num_bytes) {
   std::size_t len = (num_bytes + (1 << 21) - 1) >> 21 << 21;
   auto ptr = std::aligned_alloc(1 << 21, len);
-  std::memset(ptr, 0, len);
-  return ptr;
-}
-
-/**
- * @brief Allocates memory of size `num_bytes` aligned to 64 bytes.
- *
- * @param num_bytes The number of bytes to allocate.
- * @return A pointer to the allocated memory.
- */
-ALWAYS_INLINE
-inline void* Alloc64B(std::size_t num_bytes) {
-  std::size_t len = (num_bytes + (1 << 6) - 1) >> 6 << 6;
-  auto ptr = std::aligned_alloc(64, len);
   std::memset(ptr, 0, len);
   return ptr;
 }
