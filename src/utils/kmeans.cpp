@@ -1,9 +1,101 @@
+#include <alaya/utils/distance.h>
 #include <alaya/utils/kmeans.h>
+#include <alaya/utils/random_utils.h>
+#include <fmt/core.h>
 
-#include "alaya/utils/distance.h"
-#include "alaya/utils/random_utils.h"
+#include <limits>
 
 namespace alaya {
+template <typename DataType, typename IDType = unsigned>
+void InitCentroidsByNorm(const DataType* kData, const IDType kDataNum, const IDType kDataDim,
+                         std::vector<std::vector<DataType>>& centroids,
+                         const unsigned kClusterNum) {
+  std::vector<std::pair<DataType, unsigned>> norm_id(kDataNum);
+#pragma omp parallel for
+  for (std::size_t i = 0; i < kDataNum; ++i) {
+    norm_id[i].first = GetSqrNorm(kData + i * kDataDim, kDataDim);
+    norm_id[i].second = i;
+  }
+  std::sort(norm_id.begin(), norm_id.end());
+
+  std::size_t interval = (std::size_t)kDataNum / kClusterNum;
+#pragma omp parallel for
+  for (std::size_t i = 0; i < kClusterNum; ++i) {
+    centroids[i].assign(kData + norm_id[i * interval].second * kDataDim,
+                        kData + norm_id[i * interval].second * kDataDim + kDataDim);
+  }
+}
+
+template <typename DataType, typename IDType = unsigned>
+void kmeans(const DataType* kData, const IDType kDataNum, const int kDataDim,
+            std::vector<std::vector<DataType>>& centroids, const IDType kClusterNum,
+            bool init_centroids_norm, const unsigned int kKMeansIter) {
+  unsigned interval = kDataNum / kClusterNum;
+  std::vector<std::vector<unsigned>> id_buckets(kClusterNum);
+  // std::vector<std::vector<DataType>> temp_centroids(kClusterNum);
+  std::vector<IDType> id_cid(kDataNum);
+
+  if (init_centroids_norm) {
+    InitCentroidsByNorm(kData, kDataNum, kDataDim, centroids, kClusterNum);
+  } else {
+    std::size_t interval = (std::size_t)kDataNum / kClusterNum;
+    for (std::size_t i = 0; i < kClusterNum; ++i) {
+      auto begin = kData + i * interval * kDataDim;
+      centroids[i].assign(begin, begin + kDataDim);
+    }
+  }
+
+  for (unsigned iter = 0; iter < kKMeansIter; ++iter) {
+#pragma omp parallel for
+    for (std::size_t i = 0; i < kDataNum; ++i) {
+      DataType min_dist = std::numeric_limits<DataType>::max();
+      for (std::size_t j = 0; j < kClusterNum; ++j) {
+        DataType dist = L2Sqr<DataType>(kData + i * kDataDim, centroids[j].data(), kDataDim);
+        if (dist < min_dist) {
+          id_cid[i] = j;
+          min_dist = dist;
+        }
+      }
+    }  // for assign vector to cluster
+
+#pragma omp parallel for
+    for (std::size_t i = 0; i < kClusterNum; ++i) {
+      id_buckets[i].clear();
+    }
+
+    for (std::size_t i = 0; i < kDataNum; ++i) {
+      id_buckets[id_cid[i]].push_back(i);
+    }
+
+    for (std::size_t i = 0; i < kClusterNum; ++i) {
+      centroids[i].assign(kData + id_buckets[i][0] * kDataDim,
+                          kData + id_buckets[i][0] * kDataDim + kDataDim);
+      for (std::size_t j = 1; j < id_buckets[i].size(); ++j) {
+        AddAssign<DataType>(kData + id_buckets[i][j] * kDataDim, centroids[i].data(), kDataDim);
+      }
+      for (std::size_t j = 0; j < kDataDim; ++j) {
+        centroids[i][j] /= id_buckets[i].size();
+      }
+    }
+
+    std::vector<float> errs(kClusterNum, 0);
+    float avg_err = 0;
+#pragma omp parallel for reduction(+ : avg_err)
+    for (std::size_t i = 0; i < kClusterNum; ++i) {
+      for (std::size_t j = 0; j < id_buckets[i].size(); ++j) {
+        errs[i] +=
+            L2Sqr<DataType>(kData + id_buckets[i][j] * kDataDim, centroids[i].data(), kDataDim);
+      }
+      errs[i] /= id_buckets[i].size();
+      avg_err += errs[i];
+    }
+    std::sort(errs.begin(), errs.end());
+    fmt::println("Iter: {}, Avg Err: {}, Min Err: {}, Max Err:{}", iter, avg_err / kClusterNum,
+                 errs[0], errs[kClusterNum - 1]);
+  }  // for iter
+  // TODO Split Lage Cluster
+}
+
 void kmeans(const float* kData, const std::size_t kDataNum, const std::size_t kDataDim,
             std::vector<std::vector<float>>& centroids, unsigned int& cluster_num,
             const unsigned int kKMeansIter) {
@@ -33,8 +125,8 @@ void kmeans(const float* kData, const std::size_t kDataNum, const std::size_t kD
     avg_norm += norm_id[i].first;
   }
 
-  // fmt::println("Avg Norm: {}, Min Norm: {}, Max Norm: {}", avg_norm / kDataNum, norm_id[0].first,
-  //              norm_id[kDataNum - 1].first);
+  fmt::println("Avg Norm: {}, Min Norm: {}, Max Norm: {}", avg_norm / kDataNum, norm_id[0].first,
+               norm_id[kDataNum - 1].first);
 
 #pragma omp parallel for
   for (size_t i = 0; i < cluster_num; ++i) {
