@@ -80,7 +80,7 @@ struct NNDescent {
   };
 
   std::vector<Nhood> graph;
-  Graph<int> final_graph;
+  std::unique_ptr<Graph<int>> final_graph;
   int64_t d;
   int64_t nb;
   const float *data;
@@ -107,11 +107,11 @@ struct NNDescent {
     this->L = K + 50;
     Init();
     Descent();
-    final_graph.init(n, K);
+    final_graph->init(n, K);
     for (int i = 0; i < nb; i++) {
       std::sort(graph[i].pool.begin(), graph[i].pool.end());
       for (int j = 0; j < K; j++) {
-        final_graph.at(i, j) = graph[i].pool[j].id;
+        final_graph->at(i, j) = graph[i].pool[j].id;
       }
     }
     std::vector<Nhood>().swap(graph);

@@ -8,9 +8,9 @@
 #include <arm_neon.h>
 #endif
 
-#include "alaya/utils/common.hpp"
-#include "avx2.hpp"
-#include "avx512.hpp"
+#include "glass/common.hpp"
+#include "glass/simd/avx2.hpp"
+#include "glass/simd/avx512.hpp"
 
 namespace glass {
 

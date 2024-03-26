@@ -44,6 +44,7 @@ add_library(alaya
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/kmeans.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/random_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/TableSchema.cpp
+        include/alaya/index/quantizer/normal_quantizer.h
 )
 target_link_libraries(alaya
   PUBLIC

@@ -3,6 +3,7 @@
 #include <atomic>
 #include <random>
 #include <stack>
+#include <memory>
 
 #include "alaya/index/graph/builder.hpp"
 #include "alaya/index/graph/graph.hpp"
@@ -22,7 +23,7 @@ struct NSG : public Builder {
   int nb;
   float *data;
   int ep;
-  Graph<int> final_graph;
+  std::unique_ptr<Graph<int>> final_graph;
   RandomGenerator rng; ///< random generator
   Dist<float, float, float> dist_func;
   int GK;
@@ -60,18 +61,18 @@ struct NSG : public Builder {
     Init(knng);
     std::vector<int> degrees(n, 0);
     {
-      Graph<Node> tmp_graph(n, R);
+      std::unique_ptr<Graph<Node>> tmp_graph = std::make_unique<Graph<Node>>(n, R);
       link(knng, tmp_graph);
-      final_graph.init(n, R);
-      std::fill_n(final_graph.data, n * R, EMPTY_ID);
-      final_graph.eps = {ep};
+      final_graph->init(n, R);
+      std::fill_n(final_graph->data, n * R, EMPTY_ID);
+      final_graph->eps = {ep};
 #pragma omp parallel for
       for (int i = 0; i < n; i++) {
         int cnt = 0;
         for (int j = 0; j < R; j++) {
-          int id = tmp_graph.at(i, j).id;
+          int id = tmp_graph->at(i, j).id;
           if (id != EMPTY_ID) {
-            final_graph.at(i, cnt) = id;
+            final_graph->at(i, cnt) = id;
             cnt += 1;
           }
           degrees[i] = cnt;
@@ -83,7 +84,7 @@ struct NSG : public Builder {
     double avg = 0;
     for (int i = 0; i < n; i++) {
       int size = 0;
-      while (size < R && final_graph.at(i, size) != EMPTY_ID) {
+      while (size < R && final_graph->at(i, size) != EMPTY_ID) {
         size += 1;
       }
       max = std::max(size, max);
@@ -94,9 +95,13 @@ struct NSG : public Builder {
     printf("Degree Statistics: Max = %d, Min = %d, Avg = %lf\n", max, min, avg);
   }
 
-  Graph<int> GetGraph() override { return final_graph; }
+  std::unique_ptr<Graph<int>> GetGraph() override {
+    auto res = std::move(final_graph);
+    final_graph = nullptr;
+    return res;
+  }
 
-  void Init(const Graph<int> &knng) {
+  void Init(const std::unique_ptr<Graph<int>> &knng) {
     std::vector<float> center(d);
     for (int i = 0; i < d; ++i) {
       center[i] = 0.0;
@@ -120,7 +125,7 @@ struct NSG : public Builder {
   }
 
   template <bool collect_fullset>
-  void search_on_graph(const float *q, const Graph<int> &graph,
+  void search_on_graph(const float *q,const std::unique_ptr<Graph<int>>& graph,
                        std::vector<bool> &vis, int ep, int pool_size,
                        std::vector<Neighbor> &retset,
                        std::vector<Node> &fullset) const {
@@ -128,8 +133,8 @@ struct NSG : public Builder {
     retset.resize(pool_size + 1);
     std::vector<int> init_ids(pool_size);
     int num_ids = 0;
-    for (int i = 0; i < (int)init_ids.size() && i < graph.K; i++) {
-      int id = (int)graph.at(ep, i);
+    for (int i = 0; i < (int)init_ids.size() && i < graph->K; i++) {
+      int id = (int)graph->at(ep, i);
       if (id < 0 || id >= nb) {
         continue;
       }
@@ -161,8 +166,8 @@ struct NSG : public Builder {
       if (retset[k].flag) {
         retset[k].flag = false;
         int n = retset[k].id;
-        for (int m = 0; m < graph.K; m++) {
-          int id = (int)graph.at(n, m);
+        for (int m = 0; m < graph->K; m++) {
+          int id = (int)graph->at(n, m);
           if (id < 0 || id > nb || vis[id]) {
             continue;
           }
@@ -183,7 +188,7 @@ struct NSG : public Builder {
     }
   }
 
-  void link(const Graph<int> &knng, Graph<Node> &graph) {
+  void link(const std::unique_ptr<Graph<int>> &knng, std::unique_ptr<Graph<Node>> &graph) {
     auto st = std::chrono::high_resolution_clock::now();
     std::atomic<int> cnt{0};
 #pragma omp parallel for schedule(dynamic)
@@ -212,9 +217,9 @@ struct NSG : public Builder {
   }
 
   void sync_prune(int q, std::vector<Node> &pool, std::vector<bool> &vis,
-                  const Graph<int> &knng, Graph<Node> &graph) {
-    for (int i = 0; i < knng.K; i++) {
-      int id = knng.at(q, i);
+                  const std::unique_ptr<Graph<int>> &knng, std::unique_ptr<Graph<Node>> &graph) {
+    for (int i = 0; i < knng->K; i++) {
+      int id = knng->at(q, i);
       if (id < 0 || id >= nb || vis[id]) {
         continue;
       }
@@ -256,37 +261,37 @@ struct NSG : public Builder {
 
     for (int i = 0; i < R; i++) {
       if (i < (int)result.size()) {
-        graph.at(q, i).id = result[i].id;
-        graph.at(q, i).distance = result[i].distance;
+        graph->at(q, i).id = result[i].id;
+        graph->at(q, i).distance = result[i].distance;
       } else {
-        graph.at(q, i).id = EMPTY_ID;
+        graph->at(q, i).id = EMPTY_ID;
       }
     }
   }
 
   void add_reverse_links(int q, std::vector<std::mutex> &locks,
-                         Graph<Node> &graph) {
+                         std::unique_ptr<Graph<Node>> &graph) {
     for (int i = 0; i < R; i++) {
-      if (graph.at(q, i).id == EMPTY_ID) {
+      if (graph->at(q, i).id == EMPTY_ID) {
         break;
       }
 
-      Node sn(q, graph.at(q, i).distance);
-      int des = graph.at(q, i).id;
+      Node sn(q, graph->at(q, i).distance);
+      int des = graph->at(q, i).id;
 
       std::vector<Node> tmp_pool;
       int dup = 0;
       {
         LockGuard guard(locks[des]);
         for (int j = 0; j < R; j++) {
-          if (graph.at(des, j).id == EMPTY_ID) {
+          if (graph->at(des, j).id == EMPTY_ID) {
             break;
           }
-          if (q == graph.at(des, j).id) {
+          if (q == graph->at(des, j).id) {
             dup = 1;
             break;
           }
-          tmp_pool.push_back(graph.at(des, j));
+          tmp_pool.push_back(graph->at(des, j));
         }
       }
 
@@ -323,15 +328,15 @@ struct NSG : public Builder {
         {
           LockGuard guard(locks[des]);
           for (int t = 0; t < (int)result.size(); t++) {
-            graph.at(des, t) = result[t];
+            graph->at(des, t) = result[t];
           }
         }
 
       } else {
         LockGuard guard(locks[des]);
         for (int t = 0; t < R; t++) {
-          if (graph.at(des, t).id == EMPTY_ID) {
-            graph.at(des, t) = sn;
+          if (graph->at(des, t).id == EMPTY_ID) {
+            graph->at(des, t) = sn;
             break;
           }
         }
@@ -367,7 +372,7 @@ struct NSG : public Builder {
     while (!stack.empty()) {
       int next = EMPTY_ID;
       for (int i = 0; i < R; i++) {
-        int id = final_graph.at(node, i);
+        int id = final_graph->at(node, i);
         if (id != EMPTY_ID && !vis[id]) {
           next = id;
           break;
@@ -423,7 +428,7 @@ struct NSG : public Builder {
       } while (!found);
     }
     int pos = degrees[node];
-    final_graph.at(node, pos) = id;
+    final_graph->at(node, pos) = id;
     degrees[node] += 1;
     return node;
   }
@@ -435,56 +440,29 @@ namespace alaya {
 
 template <typename Quantizer, typename IDType = int64_t, typename DataType = float>
 struct NSG : public Index<int,float> {
-//  glass::Graph<int> graph;
-  Quantizer quant;
-//  Index<int, float> quantizer;
-  glass::NSG builder;
+  std::unique_ptr<glass::Graph<IDType>> graph = std::make_unique<glass::Graph<IDType>>();
+  std::unique_ptr<Quantizer> quant = std::make_unique<Quantizer>();
+  std::unique_ptr<glass::NSG> builder = nullptr;
 
-  // Search parameters
-//  int ef = 32;
-
-  // Memory prefetch parameters
-//  int po = 1;
-//  int pl = 1;
-
-  // Optimization parameters
-  constexpr static int kOptimizePoints = 1000;
-  constexpr static int kTryPos = 10;
-  constexpr static int kTryPls = 5;
-  constexpr static int kTryK = 10;
-  int sample_points_num;
-  std::vector<float> optimize_queries;
-//  const int graph_po;
-
-  explicit NSG(int dim, const std::string& metric, int R = 32, int L = 200):Index<IDType, DataType>(dim, 0, metric), builder(dim,metric,R,L){};
+  explicit NSG(int dim, const std::string& metric, int R = 32, int L = 200):Index<IDType, DataType>(dim, 0, metric), builder(std::make_unique<glass::NSG>(dim,metric,R,L)){};
 
   void BuildIndex(IDType vec_num, const DataType* kVecData) override {
     this->vec_num_ = vec_num;
-    builder.Build(kVecData, vec_num);
-//    graph = builder.GetGraph();
+    builder->Build(kVecData, vec_num);
+    graph = builder->GetGraph();
 
-    quant = Quantizer(this->vec_dim_);
-    quant.train(kVecData, vec_num);
-
-    sample_points_num = std::min(kOptimizePoints, this->vec_num_ - 1);
-    std::vector<int> sample_points(sample_points_num);
-    std::mt19937 rng;
-    glass::GenRandom(rng, sample_points.data(), sample_points_num, this->vec_num_);
-    optimize_queries.resize(sample_points_num * this->vec_dim_);
-    for (int i = 0; i < sample_points_num; ++i) {
-      memcpy(optimize_queries.data() + i * this->vec_dim_, kVecData + sample_points[i] * this->vec_dim_,
-             this->vec_dim_ * sizeof(float));
-    }
+    quant = std::make_unique<Quantizer>(vec_dim_,vec_num_,metric_type_, 0);
+    quant->BuildIndex(vec_num_, kVecData);
   }
 
   void Save(const char* kFilePath) const override {
-    builder.final_graph.save("");
-    // todo: save sampled points and quant
+    graph->save(std::string(kFilePath));
+    quant->Save(kFilePath);
   }
 
   void Load(const char* kFilePath) override {
-    builder.final_graph.load("");
-    // todo: load sampled points and quant
+    graph->load(std::string(kFilePath));
+    quant->Load(kFilePath);
   }
 
 };
