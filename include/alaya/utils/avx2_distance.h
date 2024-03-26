@@ -13,8 +13,8 @@
 namespace alaya {
 
 /**
- * Calculates the sum of all elements in a 256-bit AVX2 register containing 8 single-precision
- * floating-point values.
+ * Calculates the sum of all elements in a 256-bit AVX2 register containing 8
+ * single-precision floating-point values.
  *
  * @param x The AVX2 register containing the values to be summed.
  * @return The sum of all elements in the AVX2 register.
@@ -71,7 +71,8 @@ inline float InnerProductFloatAVX(const float* kX, const float* kY, int dim) {
     sum256 = _mm256_fmadd_ps(x256, y256, sum256);
     dim -= 8;
   }
-  __m128 sum128 = _mm_add_ps(_mm256_castps256_ps128(sum256), _mm256_extractf128_ps(sum256, 1));
+  __m128 sum128 = _mm_add_ps(_mm256_castps256_ps128(sum256),
+                             _mm256_extractf128_ps(sum256, 1));
   __m128 x128, y128;
 
   if (dim >= 4) {
@@ -93,7 +94,8 @@ inline float InnerProductFloatAVX(const float* kX, const float* kY, int dim) {
 UNROLL_END
 
 /**
- * Calculates the inner product of two aligned float arrays using AVX instructions.
+ * Calculates the inner product of two aligned float arrays using AVX
+ * instructions.
  *
  * @param kX Pointer to the first float array.
  * @param kY Pointer to the second float array.
@@ -101,7 +103,8 @@ UNROLL_END
  * @return The inner product of the two aligned arrays.
  */
 UNROLL_BEGIN
-inline float AlignInnerProductFloatAVX(const float* kX, const float* kY, int dim) {
+inline float AlignInnerProductFloatAVX(const float* kX, const float* kY,
+                                       int dim) {
   __m256 sum256 = _mm256_setzero_ps();
 
   const float* kEnd = kX + dim;
@@ -118,7 +121,8 @@ inline float AlignInnerProductFloatAVX(const float* kX, const float* kY, int dim
 UNROLL_END
 
 /**
- * Calculates the squared L2 distance between two float arrays using AVX instructions.
+ * Calculates the squared L2 distance between two float arrays using AVX
+ * instructions.
  *
  * @param kX Pointer to the first float array.
  * @param kY Pointer to the second float array.
@@ -138,7 +142,8 @@ inline float L2SqrFloatAVX(const float* kX, const float* kY, int dim) {
     sum256 = _mm256_fmadd_ps(diff256, diff256, sum256);
     dim -= 8;
   }
-  __m128 sum128 = _mm_add_ps(_mm256_castps256_ps128(sum256), _mm256_extractf128_ps(sum256, 1));
+  __m128 sum128 = _mm_add_ps(_mm256_castps256_ps128(sum256),
+                             _mm256_extractf128_ps(sum256, 1));
   __m128 mx128, my128, diff128;
 
   if (dim >= 4) {
@@ -162,7 +167,8 @@ inline float L2SqrFloatAVX(const float* kX, const float* kY, int dim) {
 UNROLL_END
 
 /**
- * Calculates the squared L2 distance between two align float arrays using AVX instructions.
+ * Calculates the squared L2 distance between two align float arrays using AVX
+ * instructions.
  *
  * @param kX Pointer to the first float array.
  * @param kY Pointer to the second float array.
@@ -198,7 +204,8 @@ inline float NormSqrFloatAVX(const float* kX, int dim) {
     sum256 = _mm256_fmadd_ps(x256, x256, sum256);
     dim -= 8;
   }
-  __m128 sum128 = _mm_add_ps(_mm256_castps256_ps128(sum256), _mm256_extractf128_ps(sum256, 1));
+  __m128 sum128 = _mm_add_ps(_mm256_castps256_ps128(sum256),
+                             _mm256_extractf128_ps(sum256, 1));
   __m128 x128;
 
   if (dim >= 4) {
@@ -216,7 +223,7 @@ inline float NormSqrFloatAVX(const float* kX, int dim) {
 }
 UNROLL_END
 
-inline float NormSqrTFloatAVX(const float* kX, int dim) {
+inline float NormFloatAVX(const float* kX, int dim) {
   return std::sqrt(NormSqrFloatAVX(kX, dim));
 }
 
@@ -235,7 +242,7 @@ inline float AlignNormSqrFloatAVX(const float* pV, int dim) {
 }
 UNROLL_END
 
-inline float AlignNormSqrTFloatAVX(const float* pV, int dim) {
+inline float AlignNormFloatAVX(const float* pV, int dim) {
   return std::sqrt(NormSqrFloatAVX(pV, dim));
 }
 

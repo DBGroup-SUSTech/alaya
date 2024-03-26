@@ -12,7 +12,8 @@
 namespace alaya {
 
 /**
- * Represents a function pointer type for calculating distance between two vectors.
+ * Represents a function pointer type for calculating distance between two
+ * vectors.
  *
  * @tparam T1 The type of elements in the first vector.
  * @tparam T2 The type of elements in the second vector.
@@ -60,7 +61,8 @@ UNROLL_END
  */
 UNROLL_BEGIN
 template <typename DataType>
-ALWAYS_INLINE inline DataType NaiveIp(const DataType* x, const DataType* y, int d) {
+ALWAYS_INLINE inline DataType NaiveIp(const DataType* x, const DataType* y,
+                                      int d) {
   DataType dist = 0;
   for (int i = 0; i < d; ++i) {
     dist += x[i] * y[i];
@@ -177,13 +179,13 @@ inline float NormSqrFloat(const float* kX, int dim) {
 }
 
 ALWAYS_INLINE
-inline float NormSqrTFloat(const float* kX, int dim) {
+inline float NormFloat(const float* kX, int dim) {
 #if defined(USE_AVX512F)
-  return NormSqrTFloatAVX512(kX, dim);
+  return NormFloatAVX512(kX, dim);
 #elif defined(USE_AVX)
-  return NormSqrTFloatAVX(kX, dim);
+  return NormFloatAVX(kX, dim);
 #elif defined(USE_SSE)
-  return NormSqrTFloatSSE(kX, dim);
+  return NormFloatSSE(kX, dim);
 #else
   return NaiveGetNorm(kX, dim);
 #endif
@@ -193,7 +195,7 @@ inline float NormSqrTFloat(const float* kX, int dim) {
 template <typename DataType>
 DataType GetNorm(const DataType* kX, int dim) {
   if constexpr (std::is_same<DataType, float>::value) {
-    return NormSqrTFloat(kX, dim);
+    return NormFloat(kX, dim);
   } else {
     return NaiveGetNorm(kX, dim);
   }
@@ -204,7 +206,7 @@ DataType GetSqrNorm(const DataType* kX, int dim) {
   if constexpr (std::is_same<DataType, float>::value) {
     return NormSqrFloat(kX, dim);
   } else {
-    return NaiveGetNorm(kX, dim);
+    return NaiveGetSqrNorm(kX, dim);
   }
 }
 
