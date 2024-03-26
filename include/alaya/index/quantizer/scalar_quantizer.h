@@ -136,7 +136,9 @@ struct SQSearcher : Searcher<IndexType, DataType> {
       for (int64_t i = 0; i < centroids.Size(); i++) {
         int id = centroids.pool_[i].id_;
         for (auto j : this->index_->buckets_[id]) {
-          pool.Insert(j, GetDistFunc<DataType, false>(this->metric_type_)(this->index_->Decode(j), q, query_dim));
+          auto decode_vector = this->index_->Decode(j);
+          pool.Insert(j, GetDistFunc<DataType, false>(this->metric_type_)(decode_vector, q, query_dim));
+          delete decode_vector;
         }
       }
       for (int64_t i = 0; i < k; i++) {
