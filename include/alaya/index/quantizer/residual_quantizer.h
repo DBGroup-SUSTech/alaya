@@ -26,7 +26,7 @@ struct ResidualQuantizer : Quantizer<CodeBits, IDType, DataType> {
     this->book_num_ = book_num;
     this->codes_ = (CodeType*)Alloc64B(vec_num * level * sizeof(CodeType));
     this->codebook_ = (DataType*)Alloc64B(book_num * vec_dim * sizeof(DataType));
-    this->code_dist_ = (DataType*)Alloc64B(book_num * vec_dim * sizeof(DataType));
+    this->code_dist_ = (DataType*)Alloc64B(book_num * sizeof(DataType));
     if (metric == MetricType::L2) {
       this->vec_l2sqr_ = (DataType*)Alloc64B(vec_num * sizeof(DataType));
     }

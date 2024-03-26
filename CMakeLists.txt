@@ -60,6 +60,8 @@ target_include_directories(alaya
 enable_testing()
 add_executable(distance_test tests/distance_test.cpp)
 target_link_libraries(distance_test alaya GTest::gtest_main)
+add_executable(RQ_test tests/RQ_test.cpp)
+target_link_libraries(RQ_test alaya GTest::gtest_main)
 
 add_executable(
   hello_test
@@ -72,6 +74,7 @@ target_link_libraries(
 
 include(GoogleTest)
 gtest_discover_tests(distance_test)
+gtest_discover_tests(RQ_test)
 gtest_discover_tests(hello_test)
 
 
