@@ -9,6 +9,12 @@
 #include "platform_macros.h"
 #include "sse_distance.h"
 
+#ifdef USE_MKL
+#include "mkl.h"
+#elif USE_BLAS
+#include <cblas.h>
+#endif
+
 namespace alaya {
 
 /**
@@ -61,8 +67,7 @@ UNROLL_END
  */
 UNROLL_BEGIN
 template <typename DataType>
-ALWAYS_INLINE inline DataType NaiveIp(const DataType* x, const DataType* y,
-                                      int d) {
+ALWAYS_INLINE inline DataType NaiveIp(const DataType* x, const DataType* y, int d) {
   DataType dist = 0;
   for (int i = 0; i < d; ++i) {
     dist += x[i] * y[i];
@@ -281,6 +286,22 @@ DistFunc<DataType, DataType, DataType> GetDistFunc(MetricType metric) {
       return NaiveCos;
     }
   }
+}
+
+inline void Sgemv(const float* kVec, const float* kMat, float* res, const int kDim,
+                  const int kNum) {
+  cblas_sgemv(CblasRowMajor, CblasNoTrans, kNum, kDim, 1.0, kMat, kDim, kVec, 1, 0.0, res, 1);
+}
+
+inline void Sgemm(const float* mat1, const int dim1, const int n1, const float* mat2,
+                  const int dim2, const int n2, float* res) {
+  cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, n1, n2, dim1, 1.0, mat1, dim1, mat2, dim2,
+              0.0, res, n2);
+}
+
+inline void VecMatMul(const float* kVec, const float* kMat, float* res, const int kDim,
+                      const int kNum) {
+  // TODO Impl SIMD Vec Mat Mul
 }
 
 }  // namespace alaya

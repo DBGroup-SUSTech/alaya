@@ -3,7 +3,6 @@
 #include <alaya/utils/memory.h>
 #include <alaya/utils/metric_type.h>
 #include <alaya/utils/random_utils.h>
-#include <fmt/core.h>
 #include <gtest/gtest.h>
 
 #include <cmath>
@@ -15,8 +14,7 @@ TEST(InnerProductTest, Netflix) {
   std::string netflix_path = "/dataset/netflix";
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
-  alaya::LoadVecsDataset<float>(netflix_path.c_str(), data, d_num, d_dim, query,
-                                q_num, q_dim);
+  alaya::LoadVecsDataset<float>(netflix_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
 
   int num_test = 100;
   for (int i = 0; i < num_test; ++i) {
@@ -39,8 +37,7 @@ TEST(InnerProductTest, AlignNetflix) {
   std::string netflix_path = "/dataset/netflix";
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
-  alaya::AlignLoadVecsDataset<float>(netflix_path.c_str(), data, d_num, d_dim,
-                                     query, q_num, q_dim);
+  alaya::AlignLoadVecsDataset<float>(netflix_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
   unsigned align_dim = alaya::DoAlign(d_dim, 16);
 
   int num_test = 100;
@@ -64,8 +61,7 @@ TEST(InnerProductTest, Sift1m) {
   std::string sift1m_path = "/dataset/sift1m";
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
-  alaya::LoadVecsDataset<float>(sift1m_path.c_str(), data, d_num, d_dim, query,
-                                q_num, q_dim);
+  alaya::LoadVecsDataset<float>(sift1m_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
 
   int num_test = 100;
   for (int i = 0; i < num_test; ++i) {
@@ -87,8 +83,7 @@ TEST(InnerProductTest, AlignSift1m) {
   std::string sift1m_path = "/dataset/sift1m";
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
-  alaya::AlignLoadVecsDataset<float>(sift1m_path.c_str(), data, d_num, d_dim,
-                                     query, q_num, q_dim);
+  alaya::AlignLoadVecsDataset<float>(sift1m_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
   unsigned align_dim = alaya::DoAlign(d_dim, 16);
 
   int num_test = 100;
@@ -111,8 +106,7 @@ TEST(InnerProductTest, Deep1m) {
   std::string deep1m_path = "/dataset/deep1m";
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
-  alaya::LoadVecsDataset<float>(deep1m_path.c_str(), data, d_num, d_dim, query,
-                                q_num, q_dim);
+  alaya::LoadVecsDataset<float>(deep1m_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
 
   int num_test = 100;
   for (int i = 0; i < num_test; ++i) {
@@ -134,8 +128,7 @@ TEST(InnerProductTest, AlignDeep1m) {
   std::string deep1m_path = "/dataset/deep1m";
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
-  alaya::AlignLoadVecsDataset<float>(deep1m_path.c_str(), data, d_num, d_dim,
-                                     query, q_num, q_dim);
+  alaya::AlignLoadVecsDataset<float>(deep1m_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
   unsigned align_dim = alaya::DoAlign(d_dim, 16);
 
   int num_test = 100;
@@ -158,8 +151,7 @@ TEST(InnerProductTest, Gist) {
   std::string gist_path = "/dataset/gist";
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
-  alaya::LoadVecsDataset<float>(gist_path.c_str(), data, d_num, d_dim, query,
-                                q_num, q_dim);
+  alaya::LoadVecsDataset<float>(gist_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
 
   int num_test = 100;
   for (int i = 0; i < num_test; ++i) {
@@ -181,8 +173,7 @@ TEST(InnerProductTest, AlignGist) {
   std::string gist_path = "/dataset/gist";
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
-  alaya::AlignLoadVecsDataset<float>(gist_path.c_str(), data, d_num, d_dim,
-                                     query, q_num, q_dim);
+  alaya::AlignLoadVecsDataset<float>(gist_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
   unsigned align_dim = alaya::DoAlign(d_dim, 16);
 
   int num_test = 100;
@@ -205,8 +196,7 @@ TEST(L2SqrTest, Netflix) {
   std::string netflix_path = "/dataset/netflix";
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
-  alaya::LoadVecsDataset<float>(netflix_path.c_str(), data, d_num, d_dim, query,
-                                q_num, q_dim);
+  alaya::LoadVecsDataset<float>(netflix_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
 
   int num_test = 100;
   for (int i = 0; i < num_test; ++i) {
@@ -229,8 +219,7 @@ TEST(L2SqrTest, AlignNetflix) {
   std::string netflix_path = "/dataset/netflix";
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
-  alaya::AlignLoadVecsDataset<float>(netflix_path.c_str(), data, d_num, d_dim,
-                                     query, q_num, q_dim);
+  alaya::AlignLoadVecsDataset<float>(netflix_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
   unsigned align_dim = alaya::DoAlign(d_dim, 16);
 
   int num_test = 100;
@@ -254,8 +243,7 @@ TEST(L2SqrTest, Sift1m) {
   std::string sift1m_path = "/dataset/sift1m";
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
-  alaya::LoadVecsDataset<float>(sift1m_path.c_str(), data, d_num, d_dim, query,
-                                q_num, q_dim);
+  alaya::LoadVecsDataset<float>(sift1m_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
 
   int num_test = 100;
   for (int i = 0; i < num_test; ++i) {
@@ -277,8 +265,7 @@ TEST(L2SqrTest, AlignSift1m) {
   std::string sift1m_path = "/dataset/sift1m";
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
-  alaya::AlignLoadVecsDataset<float>(sift1m_path.c_str(), data, d_num, d_dim,
-                                     query, q_num, q_dim);
+  alaya::AlignLoadVecsDataset<float>(sift1m_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
   unsigned align_dim = alaya::DoAlign(d_dim, 16);
 
   int num_test = 100;
@@ -301,8 +288,7 @@ TEST(L2SqrTest, Deep1m) {
   std::string deep_path = "/dataset/deep1m";
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
-  alaya::LoadVecsDataset<float>(deep_path.c_str(), data, d_num, d_dim, query,
-                                q_num, q_dim);
+  alaya::LoadVecsDataset<float>(deep_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
 
   int num_test = 100;
   for (int i = 0; i < num_test; ++i) {
@@ -324,8 +310,7 @@ TEST(L2SqrTest, AlignDeep1m) {
   std::string deep_path = "/dataset/deep1m";
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
-  alaya::LoadVecsDataset<float>(deep_path.c_str(), data, d_num, d_dim, query,
-                                q_num, q_dim);
+  alaya::LoadVecsDataset<float>(deep_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
   unsigned align_dim = alaya::DoAlign(d_dim, 16);
 
   int num_test = 100;
@@ -348,8 +333,7 @@ TEST(L2SqrTest, Gist) {
   std::string gist_path = "/dataset/gist";
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
-  alaya::LoadVecsDataset<float>(gist_path.c_str(), data, d_num, d_dim, query,
-                                q_num, q_dim);
+  alaya::LoadVecsDataset<float>(gist_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
 
   int num_test = 100;
   for (int i = 0; i < num_test; ++i) {
@@ -371,8 +355,7 @@ TEST(L2SqrTest, AlignGist) {
   std::string gist_path = "/dataset/gist";
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
-  alaya::LoadVecsDataset<float>(gist_path.c_str(), data, d_num, d_dim, query,
-                                q_num, q_dim);
+  alaya::LoadVecsDataset<float>(gist_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
   unsigned align_dim = alaya::DoAlign(d_dim, 16);
 
   int num_test = 100;
@@ -403,10 +386,8 @@ TEST(GetDistFuncTest, FuncTest) {
   result = ip_dist(x, y, 3);
   EXPECT_FLOAT_EQ(result, 32.0);
 
-  float align_x[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 0,
-                     0,   0,   0,   0,   0,   0,   0,   0};
-  float align_y[] = {2.0, 8.0, 4.0, 2.0, 1.0, 3.0, 9.0, 0,
-                     0,   0,   0,   0,   0,   0,   0,   0};
+  float align_x[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  float align_y[] = {2.0, 8.0, 4.0, 2.0, 1.0, 3.0, 9.0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   auto align_l2 = alaya::GetDistFunc<float, true>(alaya::MetricType::L2);
   result = align_l2(align_x, align_y, 3);
@@ -495,4 +476,13 @@ TEST(NormTest, Gist) {
     EXPECT_TRUE(std::fabs(naive_norm - simd_norm) < kDeltaFloat);
     EXPECT_TRUE(std::fabs(std::sqrt(simd_sqr_res) - simd_norm) < kDeltaFloat);
   }
+}
+
+TEST(SgemvTest, Basic) {
+  float A[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+  float x[] = {1.0, 2.0, 4.0};
+  float y[2];
+  alaya::Sgemv(x, A, y, 3, 2);
+  EXPECT_FLOAT_EQ(y[0], 17.0);
+  EXPECT_FLOAT_EQ(y[1], 38.0);
 }

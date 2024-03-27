@@ -1,15 +1,17 @@
 #pragma once
 
-#include <alaya/searcher/searcher.h>
+// #include <alaya/searcher/searcher.h>
 #include <alaya/utils/heap.h>
-#include <alaya/utils/metric_type.h>
-#include "quantizer.h"
 #include <alaya/utils/kmeans.h>
+#include <alaya/utils/metric_type.h>
 #include <sys/wait.h>
 
 #include <cstddef>
 #include <cstdint>
 #include <vector>
+
+#include "../../searcher/searcher.h"
+#include "quantizer.h"
 
 namespace alaya {
 
@@ -18,7 +20,7 @@ struct ResidualQuantizer : Quantizer<CodeBits, IDType, DataType> {
   using CodeType = DependentBitsType<CodeBits>;
   static constexpr auto book_size_ = GetMaxIntegral(CodeBits);
   ResidualQuantizer() = default;
-  DataType *vec_l2sqr_;
+  DataType* vec_l2sqr_;
   int level_;
   ResidualQuantizer(int vec_dim, IDType vec_num, MetricType metric, unsigned book_num, int level)
       : Quantizer<CodeBits, IDType, DataType>(vec_dim, vec_num, metric) {
@@ -33,7 +35,7 @@ struct ResidualQuantizer : Quantizer<CodeBits, IDType, DataType> {
     this->level_ = level;
   }
 
-  DataType* Decode(IDType data_id) { 
+  DataType* Decode(IDType data_id) {
     DataType* res = new DataType[this->vec_dim_ * level_];
     for (int i = 0; i < level_; i++) {
       int start = this->vec_dim_ * this->codes_[data_id * level_ + i];
@@ -41,7 +43,7 @@ struct ResidualQuantizer : Quantizer<CodeBits, IDType, DataType> {
         res[i * this->vec_dim_ + j] = this->codebook_[start + j];
       }
     }
-    return res; 
+    return res;
   }
 
   DataType* GetCodeWord(IDType data_id) {
@@ -76,7 +78,8 @@ struct ResidualQuantizer : Quantizer<CodeBits, IDType, DataType> {
         size_t id = -1;
         float min_dist = 0;
         for (size_t j = 0; j < centroids.size(); j++) {
-          float dist = L2Sqr<float>(vec_data + i * this->vec_dim_, centroids[j].data(), this->vec_dim_);
+          float dist =
+              L2Sqr<float>(vec_data + i * this->vec_dim_, centroids[j].data(), this->vec_dim_);
           if (id == -1 || min_dist > dist) {
             id = j;
             min_dist = dist;
@@ -100,7 +103,7 @@ struct ResidualQuantizer : Quantizer<CodeBits, IDType, DataType> {
 
   void Load(const char* kFilePath) {}
 
-  ~ResidualQuantizer()  {
+  ~ResidualQuantizer() {
     free(this->codes_);
     free(this->codebook_);
     free(this->code_dist_);
@@ -109,23 +112,16 @@ struct ResidualQuantizer : Quantizer<CodeBits, IDType, DataType> {
 
 template <typename IndexType, typename DataType = float>
 struct RQSearcher : Searcher<IndexType, DataType> {
-  void SetIndex(const IndexType& index) {
-    this->index_ = std::make_unique(index);
-  }
+  void SetIndex(const IndexType& index) { this->index_ = std::make_unique(index); }
   void Optimize(int num_threads = 0) {}
   void SetEf(int ef) {}
-  void Search(
-    int64_t query_num,
-    int64_t query_dim,
-    const DataType* queries,
-    int64_t k,
-    DataType* distances,
-    int64_t* labels
-    // const SearchParameters* search_params = nullptr
+  void Search(int64_t query_num, int64_t query_dim, const DataType* queries, int64_t k,
+              DataType* distances, int64_t* labels
+              // const SearchParameters* search_params = nullptr
   ) const override {
     const int64_t vec_num = this->index_->vec_num_;
-    const unsigned &book_num = this->index_->book_num_;
-    const int &level = this->index_->level;
+    const unsigned& book_num = this->index_->book_num_;
+    const int& level = this->index_->level;
     const DataType* codes = this->index_->codes_;
     const DataType* codebook = this->index_->codebook_;
     const DataType* code_dist = this->index_->code_dist_;
@@ -158,4 +154,4 @@ struct RQSearcher : Searcher<IndexType, DataType> {
     }
   }
 };
-} // namespace alaya
+}  // namespace alaya

@@ -1,6 +1,13 @@
 enable_testing()
-add_executable(distance_test distance_test.cpp)
-target_link_libraries(distance_test alaya GTest::gtest_main)
+add_executable(
+  distance_test
+  distance_test.cpp
+)
+target_link_libraries(
+  distance_test
+  alaya
+  GTest::gtest_main
+)
 
 include(GoogleTest)
 gtest_discover_tests(distance_test)

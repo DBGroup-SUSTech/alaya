@@ -9,8 +9,8 @@ namespace alaya {
 /**
  * @brief Abstract structure for an index, supports building index for vectors.
  *
- * @tparam IDType The data type for storing IDs is determined by the number of vectors
-           that need to be indexed, with the default type being int64_t.
+ * @tparam IDType The data type for storing IDs is determined by the number of
+ vectors that need to be indexed, with the default type being int64_t.
  * @tparam DataType The data type for vector data, with the default being float.
  */
 template <typename IDType = int64_t, typename DataType = float>
@@ -18,6 +18,8 @@ struct Index {
   int vec_dim_;             ///< Vector dimension
   IDType vec_num_;          ///< The total number of indexed vectors
   MetricType metric_type_;  ///< The type of metric this index uses for index building
+
+  Index() = default;
 
   /**
    * @brief Construct a new Index object
@@ -40,7 +42,8 @@ struct Index {
       : vec_dim_(dim), vec_num_(num), metric_type_(metric) {}
 
   /**
-   * @brief Destructor, derived classes need to implement their own object destruction process.
+   * @brief Destructor, derived classes need to implement their own object
+   * destruction process.
    *
    */
   virtual ~Index(){};

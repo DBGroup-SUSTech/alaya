@@ -50,22 +50,51 @@ target_link_libraries(alaya
   OpenMP::OpenMP_CXX
   fmt
 )
-
 target_include_directories(alaya
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 
-add_executable(test_RQ test_RQ.cpp)
-target_link_libraries(test_RQ alaya)
+find_package(MKL)
+if(MKL_FOUND)
+  message(STATUS "MKL found")
+  add_compile_definitions(USE_MKL)
+  target_link_libraries(alaya PUBLIC MKL::MKL)
+else()
+  find_package(BLAS)
+  add_compile_definitions(USE_BLAS)
+  target_link_libraries(alaya PUBLIC ${BLAS_LIBRARIES})
+endif()
+
+# add_subdirectory(tests)
+
+# add_executable(test_RQ test_RQ.cpp)
+# target_link_libraries(test_RQ alaya)
 
 # add_executable(test_main test_main.cpp)
 # target_link_libraries(test_main alaya)
 
 enable_testing()
-add_executable(distance_test tests/distance_test.cpp)
-target_link_libraries(distance_test alaya GTest::gtest_main)
+add_executable(
+  distance_test
+  tests/distance_test.cpp
+)
+target_link_libraries(
+  distance_test
+  alaya
+  GTest::gtest_main
+)
+
+add_executable(
+  pq_test
+  tests/pq_test.cpp
+)
+target_link_libraries(
+  pq_test
+  alaya
+  GTest::gtest_main
+)
 
 add_executable(
   hello_test
@@ -78,6 +107,7 @@ target_link_libraries(
 
 include(GoogleTest)
 gtest_discover_tests(distance_test)
+gtest_discover_tests(pq_test)
 gtest_discover_tests(hello_test)
 
 

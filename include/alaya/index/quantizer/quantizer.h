@@ -1,11 +1,12 @@
 #pragma once
 
 #include <cstdint>
+
 #include "../../utils/distance.h"
+#include "../../utils/kmeans.h"
+#include "../../utils/memory.h"
 #include "../../utils/type_utils.h"
 #include "../index.h"
-#include "../../utils/memory.h"
-#include "../../utils/kmeans.h"
 
 namespace alaya {
 
@@ -20,14 +21,15 @@ template <unsigned CodeBits = 8, typename IDType = int64_t, typename DataType = 
 struct Quantizer : Index<IDType, DataType> {
   using CodeType = DependentBitsType<CodeBits>;
   static constexpr auto book_size_ = GetMaxIntegral(CodeBits);
-  unsigned book_num_;
-  CodeType* codes_;
-  DataType* codebook_;
-  DataType* code_dist_;
+  unsigned book_num_;                ///<
+  CodeType* codes_ = nullptr;        ///< Line id for codebook
+  std::vector<DataType*> codebook_;  ///<
+  DataType* code_dist_ = nullptr;    ///<
 
   Quantizer() = default;
 
-  Quantizer(int vec_dim, IDType vec_num, MetricType metric) : Index<IDType, DataType>(vec_dim, vec_num, metric) {}
+  Quantizer(int vec_dim, IDType vec_num, MetricType metric)
+      : Index<IDType, DataType>(vec_dim, vec_num, metric) {}
 
   /**
    * @brief
@@ -41,8 +43,8 @@ struct Quantizer : Index<IDType, DataType> {
    * @param labels
    */
   template <typename Pool>
-  void Reorder(const Pool& pool, const DataType* query, const DataType* data, int64_t k, DataType* distances,
-               int64_t* labels);
+  void Reorder(const Pool& pool, const DataType* query, const DataType* data, int64_t k,
+               DataType* distances, int64_t* labels){};
 
   /**
    * @brief
@@ -50,7 +52,7 @@ struct Quantizer : Index<IDType, DataType> {
    * @param data_id
    * @return DataType*
    */
-  virtual DataType* Decode(IDType data_id) = 0;
+  virtual DataType* Decode(IDType data_id){};
 
   /**
    * @brief

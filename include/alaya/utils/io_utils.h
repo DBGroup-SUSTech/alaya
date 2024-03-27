@@ -8,6 +8,23 @@
 #include "memory.h"
 
 namespace alaya {
+/**
+ * @brief
+ *
+ * @tparam T
+ * @param out
+ * @param podRef
+ */
+template <typename T>
+void WriteBinary(std::ostream& out, const T& podRef) {
+  out.write((char*)&podRef, sizeof(T));
+}
+
+template <typename T>
+void ReadBinary(std::istream& in, T& podRef) {
+  in.read((char*)&podRef, sizeof(T));
+}
+
 template <typename DataType>
 DataType* LoadVecs(const char* kFileName, unsigned& num, unsigned& dim) {
   fmt::println("Load data from {}", kFileName);
@@ -35,12 +52,15 @@ DataType* LoadVecs(const char* kFileName, unsigned& num, unsigned& dim) {
 }  // LoadVecs
 
 template <typename DataType>
-void LoadVecsDataset(const char* kDatasetPath, DataType*& data, unsigned& d_num, unsigned& d_dim,
-                     DataType*& query, unsigned& q_num, unsigned& q_dim) {
+void LoadVecsDataset(const char* kDatasetPath, DataType*& data, unsigned& d_num,
+                     unsigned& d_dim, DataType*& query, unsigned& q_num,
+                     unsigned& q_dim) {
   std::filesystem::path dataset_path(kDatasetPath);
   std::string dataset_name = dataset_path.filename().string();
-  std::string data_path = fmt::format("{}/{}_base.fvecs", kDatasetPath, dataset_name);
-  std::string query_path = fmt::format("{}/{}_query.fvecs", kDatasetPath, dataset_name);
+  std::string data_path =
+      fmt::format("{}/{}_base.fvecs", kDatasetPath, dataset_name);
+  std::string query_path =
+      fmt::format("{}/{}_query.fvecs", kDatasetPath, dataset_name);
 
   data = LoadVecs<DataType>(data_path.c_str(), d_num, d_dim);
   query = LoadVecs<DataType>(query_path.c_str(), q_num, q_dim);
@@ -61,8 +81,10 @@ DataType* AlignLoadVecs(const char* kFileName, unsigned& num, unsigned& dim) {
   std::ios::pos_type ss = in.tellg();
   std::size_t fsize = (size_t)ss;
   num = (unsigned)(fsize / (dim + 1) / 4);
-  fmt::println("Data number: {}, data dimension: {}, align dim: {}", num, dim, align_dim);
-  DataType* data = (DataType*)Alloc64B(std::size_t(num) * align_dim * sizeof(float));
+  fmt::println("Data number: {}, data dimension: {}, align dim: {}", num, dim,
+               align_dim);
+  DataType* data =
+      (DataType*)Alloc64B(std::size_t(num) * align_dim * sizeof(float));
 
   in.seekg(0, std::ios::beg);
   for (size_t i = 0; i < num; i++) {
@@ -74,12 +96,15 @@ DataType* AlignLoadVecs(const char* kFileName, unsigned& num, unsigned& dim) {
 }  // AlignLoadVecs
 
 template <typename DataType>
-void AlignLoadVecsDataset(const char* kDatasetPath, DataType*& data, unsigned& d_num,
-                          unsigned& d_dim, DataType*& query, unsigned& q_num, unsigned& q_dim) {
+void AlignLoadVecsDataset(const char* kDatasetPath, DataType*& data,
+                          unsigned& d_num, unsigned& d_dim, DataType*& query,
+                          unsigned& q_num, unsigned& q_dim) {
   std::filesystem::path dataset_path(kDatasetPath);
   std::string dataset_name = dataset_path.filename().string();
-  std::string data_path = fmt::format("{}/{}_base.fvecs", kDatasetPath, dataset_name);
-  std::string query_path = fmt::format("{}/{}_query.fvecs", kDatasetPath, dataset_name);
+  std::string data_path =
+      fmt::format("{}/{}_base.fvecs", kDatasetPath, dataset_name);
+  std::string query_path =
+      fmt::format("{}/{}_query.fvecs", kDatasetPath, dataset_name);
 
   data = AlignLoadVecs<DataType>(data_path.c_str(), d_num, d_dim);
   query = AlignLoadVecs<DataType>(query_path.c_str(), q_num, q_dim);
