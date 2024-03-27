@@ -52,7 +52,16 @@ struct Quantizer : Index<IDType, DataType> {
    * @param data_id
    * @return DataType*
    */
-  virtual DataType* Decode(IDType data_id){};
+  virtual DataType* Decode(IDType data_id) { return nullptr; };
+
+  /**
+   * @brief Override the () operator, with the input parameter being the vector ID from the dataset,
+   * and the return value being the approximate distance obtained by looking up the Distance Table.
+   *
+   * @param vec_id The vector ID for looking up the approximate distnce.
+   * @return DataType
+   */
+  virtual DataType operator()(IDType vec_id) const = 0;
 
   /**
    * @brief

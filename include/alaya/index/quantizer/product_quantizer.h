@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cuda_runtime_api.h>
+#include <faiss/Clustering.h>
 #include <fmt/core.h>
 
 #include <cstddef>
@@ -9,7 +11,7 @@
 
 #include "../../utils/distance.h"
 #include "../../utils/io_utils.h"
-#include "../../utils/kmeans.h"
+// #include "../../utils/kmeans.h"
 #include "../../utils/memory.h"
 #include "../index.h"
 #include "quantizer.h"
@@ -19,10 +21,12 @@ namespace alaya {
 template <unsigned CodeBits = 8, typename IDType = int64_t, typename DataType = float>
 struct ProductQuantizer : Quantizer<CodeBits, IDType, DataType> {
   using CodeType = DependentBitsType<CodeBits>;
-  static constexpr auto book_size_ = GetMaxIntegral(CodeBits);
-  DistFunc<DataType, DataType, DataType> build_dist_func_;
+  static constexpr auto kBookSize_ = GetMaxIntegral(CodeBits);
+  std::size_t dist_line_size_;
+  DistFunc<DataType, DataType, DataType> dist_func_;
   std::vector<unsigned> sub_dimensions_;
   std::vector<unsigned> sub_vec_start_;
+
   // std::vector<std::size_t> sub_code_start_;
 
   ProductQuantizer() = default;
@@ -31,8 +35,10 @@ struct ProductQuantizer : Quantizer<CodeBits, IDType, DataType> {
       : Quantizer<CodeBits, IDType, DataType>(vec_dim, vec_num, metric),
         sub_dimensions_(book_num, (unsigned)vec_dim / book_num),
         sub_vec_start_(book_num, 0),
-        build_dist_func_(GetDistFunc<DataType, false>(metric)) {
+        dist_func_(GetDistFunc<DataType, false>(metric)) {
     this->book_num_ = book_num;  // 4, 8, 16 ...
+
+    dist_line_size_ = book_num * kBookSize_;
 
     unsigned reminder = this->vec_dim_ % book_num;
     if (reminder) {
@@ -41,12 +47,12 @@ struct ProductQuantizer : Quantizer<CodeBits, IDType, DataType> {
 
     // codes_ = vec_num * book_num_
     this->codes_ = (CodeType*)Alloc64B(sizeof(CodeType) * vec_num * book_num);
-    // code_dist_ = book_size_ * book_num
-    this->code_dist_ = (DataType*)Alloc64B(sizeof(DataType) * book_size_ * book_num);
-    // Each codebook has sub_dimensions_ * book_size_ elements
+    // code_dist_ = kBookSize_ * book_num
+    this->code_dist_ = (DataType*)Alloc64B(sizeof(DataType) * kBookSize_ * book_num);
+    // Each codebook has sub_dimensions_ * kBookSize_ elements
     this->codebook_.resize(book_num);
     for (std::size_t i = 0; i < book_num; i++) {
-      this->codebook_[i] = (DataType*)Alloc64B(sizeof(DataType) * sub_dimensions_[i] * book_size_);
+      this->codebook_[i] = (DataType*)Alloc64B(sizeof(DataType) * sub_dimensions_[i] * kBookSize_);
     }
     for (unsigned i = 1; i < book_num; ++i) {
       sub_vec_start_[i] = sub_vec_start_[i - 1] + sub_dimensions_[i - 1];
@@ -55,47 +61,35 @@ struct ProductQuantizer : Quantizer<CodeBits, IDType, DataType> {
 
   void BuildIndex(IDType vec_num, const DataType* kVecData) override {
     std::vector<std::vector<DataType>> sub_vec(this->book_num_);
-    std::vector<std::vector<std::vector<float>>> centroids(
-        this->book_num_, std::vector<std::vector<float>>(book_size_));
-    // std::vector<unsigned> start_local(this->book_num_);
 
-    // for (unsigned i = 0, dim_start = 0; i < this->book_num_; ++i) {
-    for (unsigned i = 0; i < this->book_num_; ++i) {
+    for (auto i = 0; i < this->book_num_; ++i) {
       sub_vec[i].resize(vec_num * sub_dimensions_[i]);
-      // start_local[i] = dim_start;
-      // dim_start += sub_dimensions_[i];
     }
 
-    for (int i = 0; i < vec_num; ++i) {
-      for (int j = 0; j < this->book_num_; ++j) {
+    for (auto i = 0; i < vec_num; ++i) {
+      for (auto j = 0; j < this->book_num_; ++j) {
         std::memcpy(sub_vec[j].data() + i * sub_dimensions_[j],
                     kVecData + i * this->vec_dim_ + sub_vec_start_[j],
                     sub_dimensions_[j] * sizeof(DataType));
       }
     }
 
-    for (unsigned i = 0; i < this->book_num_; ++i) {
-      kmeans(sub_vec[i].data(), vec_num, sub_dimensions_[i], centroids[i], book_size_, 20);
-    }
-
-    // Init codebook
-    for (unsigned i = 0; i < this->book_num_; ++i) {
-      for (unsigned j = 0; j < book_size_; ++j) {
-        std::memcpy(this->codebook_[i] + j * sub_dimensions_[i], centroids[i][j].data(),
-                    sub_dimensions_[i] * sizeof(DataType));
-      }
+    for (auto i = 0; i < this->book_num_; ++i) {
+      // kmeans(sub_vec[i].data(), vec_num, sub_dimensions_[i], centroids[i], kBookSize_, 20);
+      auto quan_err = faiss::kmeans_clustering(sub_dimensions_[i], vec_num, kBookSize_,
+                                               sub_vec[i].data(), (float*)this->codebook_[i]);
+      fmt::println("book:{}, quan_err: {}", i, quan_err);
     }
 
     // Init codes
-    for (unsigned i = 0; i < vec_num; ++i) {            // Each Vector
-      for (unsigned j = 0; j < this->book_num_; ++j) {  // Each Codebook
+    for (auto i = 0; i < this->book_num_; i++) {
+      for (auto j = 0; j < vec_num; j++) {
         float min_dist = std::numeric_limits<float>::max();
-        for (unsigned k = 0; k < book_size_; ++k) {
-          float dist = build_dist_func_(sub_vec[j].data() + i * sub_dimensions_[j],
-                                        centroids[j][k].data(), sub_dimensions_[j]);
+        for (auto k = 0; k < kBookSize_; k++) {
+          float dist = dist_func_(sub_vec[i].data() + j * sub_dimensions_[i],
+                                  this->codebook_[i] + k * sub_dimensions_[i], sub_dimensions_[i]);
           if (dist < min_dist) {
-            // codes = vec_num * book_num
-            this->codes_[i * this->book_num_ + j] = k;
+            this->codes_[j * this->book_num_ + i] = k;
             min_dist = dist;
           }
         }
@@ -103,28 +97,31 @@ struct ProductQuantizer : Quantizer<CodeBits, IDType, DataType> {
     }  // Init codes
   }    // BuildIndex
 
-  DataType* Decode(IDType data_id) override {
-    // DataType* vec = new DataType[this->vec_dim_];
-    // for (unsigned i = 0; i < this->book_num_; ++i) {
-    //   std::memcpy(
-    //       vec + i * sub_dimensions_[i],
-    //       this->codebook_[i] +
-    //           this->codes_[data_id * this->book_num_ + i] *
-    //           sub_dimensions_[i],
-    //       sub_dimensions_[i] * sizeof(DataType));
-    // }
-    return nullptr;
+  void SetDistFunc(MetricType metric) { dist_func_ = GetDistFunc<DataType, false>(metric); }
+
+  DataType operator()(IDType vec_id) const override {
+    DataType res = 0;
+    CodeType* codes = this->codes_ + vec_id * this->book_num_;
+    for (auto i = 0; i < this->book_num_; ++i) {
+      PrefetchL1(this->code_dist_ + i * dist_line_size_ + codes[i]);
+    }
+    for (auto i = 0; i < this->book_num_; ++i) {
+      res += this->code_dist_[i * dist_line_size_ + codes[i]];
+    }
+    return res;
   }
+
+  DataType* Decode(IDType data_id) override { return nullptr; }
 
   DataType* GetCodeWord(IDType data_id) override {
     DataType* vec = new DataType[this->vec_dim_];
-    for (unsigned i = 0; i < this->book_num_; ++i) {
+    for (auto i = 0; i < this->book_num_; ++i) {
       std::memcpy(
           vec + i * sub_dimensions_[i],
           this->codebook_[i] + this->codes_[data_id * this->book_num_ + i] * sub_dimensions_[i],
           sub_dimensions_[i] * sizeof(DataType));
     }
-    return nullptr;
+    return vec;
   }
 
   void Save(const char* kFilePath) const override {
@@ -136,10 +133,10 @@ struct ProductQuantizer : Quantizer<CodeBits, IDType, DataType> {
     }
     unsigned book_num = this->book_num_;
     WriteBinary(out, book_num);
-    unsigned book_size = this->book_size_;
+    unsigned book_size = this->kBookSize_;
     WriteBinary(out, book_size);
     for (unsigned i = 0; i < book_num; ++i) {
-      out.write((char*)this->codebook_[i], sizeof(DataType) * sub_dimensions_[i] * book_size_);
+      out.write((char*)this->codebook_[i], sizeof(DataType) * sub_dimensions_[i] * kBookSize_);
     }
     out.write((char*)this->codes_, sizeof(CodeType) * this->vec_num_ * book_num);
     out.close();
@@ -158,25 +155,25 @@ struct ProductQuantizer : Quantizer<CodeBits, IDType, DataType> {
 
     unsigned book_size;
     ReadBinary(in, book_size);
-    if (this->book_size_ != book_size) {
-      fmt::println("book_size not match, inference size: {}, file size: {}", this->book_size_,
+    if (this->kBookSize_ != book_size) {
+      fmt::println("book_size not match, inference size: {}, file size: {}", this->kBookSize_,
                    book_size);
       exit(-1);
     }
 
     this->sub_dimensions_.resize(book_num);
     this->codebook_.resize(book_num);
-    for (unsigned i = 0; i < book_num; ++i) {
+    for (auto i = 0; i < book_num; ++i) {
       this->sub_dimensions_[i] = this->vec_dim_ / book_num;
-      this->codebook_[i] = (DataType*)Alloc64B(sizeof(DataType) * sub_dimensions_[i] * book_size_);
+      this->codebook_[i] = (DataType*)Alloc64B(sizeof(DataType) * sub_dimensions_[i] * kBookSize_);
     }
     unsigned reminder = this->vec_dim_ % book_num;
     if (reminder) {
       sub_dimensions_[book_num - 1] += reminder;
     }
     this->codes_ = (CodeType*)Alloc64B(sizeof(CodeType) * this->vec_num_ * this->book_num_);
-    for (unsigned i = 0; i < book_num; ++i) {
-      in.read((char*)this->codebook_[i], sizeof(DataType) * sub_dimensions_[i] * book_size_);
+    for (auto i = 0; i < book_num; ++i) {
+      in.read((char*)this->codebook_[i], sizeof(DataType) * sub_dimensions_[i] * kBookSize_);
     }
     in.read((char*)this->codes_, sizeof(CodeType) * this->vec_num_ * this->book_num_);
     in.close();
