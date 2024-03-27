@@ -39,6 +39,8 @@ add_compile_options(-lsqlite3)
 
 find_package(OpenMP REQUIRED)
 
+add_subdirectory(3rdparty)
+
 add_library(alaya
   STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/kmeans.cpp
@@ -49,6 +51,7 @@ target_link_libraries(alaya
   PUBLIC
   OpenMP::OpenMP_CXX
   fmt
+  faiss
 )
 target_include_directories(alaya
     PUBLIC
