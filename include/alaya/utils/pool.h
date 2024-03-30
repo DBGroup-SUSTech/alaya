@@ -1,35 +1,32 @@
 #pragma once
 
+#include <sys/types.h>
+
+#include <cstdint>
 #include <iostream>
-#include <alaya/utils/memory.h>
+
+#include "memory.h"
 
 namespace alaya {
 /**
- * @brief 
- * 
+ * @brief
+ *
  * @param
  */
 struct Bitset {
-  explicit Bitset(int n) : 
-    kBsCnt((n + 63) / 64), kBytes(kBsCnt * 8), 
-    bs_((uint64_t*)Alloc64B(kBytes)) {
+  explicit Bitset(int n)
+      : kBsCnt((n + 63) / 64), kBytes(kBsCnt * 8), bs_((uint64_t*)Alloc64B(kBytes)) {
     memset(bs_, 0, kBytes);
   }
   ~Bitset() { free(bs_); }
-  void Set(int i) {
-    bs_[i >> 6] |= uint64_t(1) << (i & 63);
-  }
+  void Set(int i) { bs_[i >> 6] |= uint64_t(1) << (i & 63); }
   /**
-   * @brief 
-   * 
-   * @param i 
+   * @brief
+   *
+   * @param i
    */
-  void Reset(int i) {
-    bs_[i >> 6] &= uint64_t(-1) ^ (uint64_t(1) << (i & 63));
-  }
-  bool Get(int i) {
-    return bs_[i >> 6] >> (i & 63) & 1;
-  }
+  void Reset(int i) { bs_[i >> 6] &= uint64_t(-1) ^ (uint64_t(1) << (i & 63)); }
+  bool Get(int i) { return bs_[i >> 6] >> (i & 63) & 1; }
   void Up(int i) {
     int p = i >> 6;
     int q = i & 63;
@@ -48,34 +45,33 @@ struct Bitset {
   }
   const int kBsCnt;
   const int kBytes;
-  uint64_t *bs_;
+  uint64_t* bs_;
 };
 
-template<typename IDType, typename DistType>
+template <typename DistType, typename IDType = uint64_t>
 struct Node {
   IDType id_;
   DistType dis_;
   Node() = default;
   Node(IDType id_, DistType dis_) : id_(id_), dis_(dis_) {}
-  inline friend bool operator < (const Node &l, const Node &r) {
+  inline friend bool operator<(const Node& l, const Node& r) {
     return l.dis_ < r.dis_ || (l.dis_ == r.dis_ && l.id_ < r.id_);
   }
 };
 
-template<typename IDType, typename DistType>
+template <typename DistType, typename IDType = uint64_t>
 struct MaxHeap {
   explicit MaxHeap(int capacity_) : size_(0), capacity_(capacity_) {
-    pool_ = new Node<IDType, DistType>[capacity_];
+    pool_ = new Node<DistType, IDType>[capacity_];
   }
-  ~MaxHeap () { delete[] pool_; }
+  ~MaxHeap() { delete[] pool_; }
   void Push(IDType u, DistType dis) {
     if (size_ < capacity_) {
       pool_[size_++] = {u, dis};
       int now = size_ - 1;
       while (now > 0) {
         int nxt = (now - 1) / 2;
-        if (pool_[nxt] < pool_[now])
-          std::swap(pool_[now], pool_[nxt]);
+        if (pool_[nxt] < pool_[now]) std::swap(pool_[now], pool_[nxt]);
         now = nxt;
       }
     } else if (dis < pool_[0].dis_) {
@@ -88,12 +84,8 @@ struct MaxHeap {
     Down();
     return pool_[size_].id_;
   }
-  bool Empty() {
-    return size_ == 0;
-  }
-  int Size() {
-    return size_;
-  }
+  bool Empty() { return size_ == 0; }
+  int Size() { return size_; }
   void Down(int now = 0) {
     while (true) {
       int ls = now * 2 + 1;
@@ -116,23 +108,22 @@ struct MaxHeap {
     }
   }
   int size_, capacity_;
-  Node<IDType, DistType> *pool_;
+  Node<DistType, IDType>* pool_;
 };
 
-template<typename IDType, typename DistType>
+template <typename DistType, typename IDType = uint64_t>
 struct MinMaxHeap {
   explicit MinMaxHeap(int capacity) : capacity_(capacity) {
-    pool_ = new Node<IDType, DistType>[capacity_];
+    pool_ = new Node<DistType, IDType>[capacity_];
   }
-  ~MinMaxHeap () { delete[] pool_; }
+  ~MinMaxHeap() { delete[] pool_; }
   bool Push(IDType u, DistType dis) {
     if (pos_ < capacity_) {
       pool_[pos_++] = {u, dis};
       int now = pos_ - 1;
       while (now > 0) {
         int nxt = (now - 1) / 2;
-        if (pool_[nxt] < pool_[now])
-          std::swap(pool_[now], pool_[nxt]);
+        if (pool_[nxt] < pool_[now]) std::swap(pool_[now], pool_[nxt]);
         now = nxt;
       }
       size_++;
@@ -164,12 +155,8 @@ struct MinMaxHeap {
     size_--;
     return res;
   }
-  bool Empty() {
-    return size_ == 0;
-  }
-  int Size() {
-    return size_;
-  }
+  bool Empty() { return size_ == 0; }
+  int Size() { return size_; }
   void Down(int now = 0) {
     while (true) {
       int ls = now * 2 + 1;
@@ -192,13 +179,14 @@ struct MinMaxHeap {
     }
   }
   int pos_ = 0, size_ = 0, capacity_;
-  Node<IDType, DistType> *pool_;
+  Node<DistType, IDType>* pool_;
 };
 
-template<typename IDType, typename DistType>
+template <typename DistType, typename IDType = uint64_t>
 struct LinearPool {
-  explicit LinearPool(int capacity) : pos_(0), size_(0), capacity_(capacity), del_(capacity), vis_(capacity) {
-    pool_ = new Node<IDType, DistType>[capacity + 1];
+  explicit LinearPool(int capacity)
+      : pos_(0), size_(0), capacity_(capacity), del_(capacity), vis_(capacity) {
+    pool_ = new Node<DistType, IDType>[capacity + 1];
   }
   ~LinearPool() { delete[] pool_; }
   int UpperBound(DistType dis) {
@@ -222,7 +210,7 @@ struct LinearPool {
     }
     int p = UpperBound(dis);
     del_.Up(p);
-    std::memmove(pool_ + p + 1, pool_ + p, sizeof(Node<IDType, DistType>) * (size_ - p));
+    std::memmove(pool_ + p + 1, pool_ + p, sizeof(Node<DistType, IDType>) * (size_ - p));
     pool_[p] = {u, dis};
     if (size_ < capacity_) {
       size_++;
@@ -244,15 +232,14 @@ struct LinearPool {
     return res;
   }
   int pos_, size_, capacity_;
-  Node<IDType, DistType> *pool_;
+  Node<DistType, IDType>* pool_;
   Bitset del_, vis_;
 };
 
-template<typename IDType, typename DistType>
+template <typename DistType, typename IDType>
 struct ResultPool {
-  ResultPool(int n, int capacity, int k) : 
-    n_(n), capacity_(capacity), k_(k), 
-    result_(k), candidate_(capacity), vis_(n) {}
+  ResultPool(int n, int capacity, int k)
+      : n_(n), capacity_(capacity), k_(k), result_(k), candidate_(capacity), vis_(n) {}
   bool Insert(IDType u, DistType dis) {
     result_.Push(u, dis);
     return candidate_.Push(u, dis);
@@ -262,9 +249,9 @@ struct ResultPool {
   IDType ID(int i) const { return result_.pool_[i].id_; }
   int Capacity() const { return capacity_; }
   int n_, capacity_, k_;
-  MaxHeap<IDType, DistType> result_;
-  MinMaxHeap<IDType, DistType> candidate_;
+  MaxHeap<DistType, IDType> result_;
+  MinMaxHeap<DistType, IDType> candidate_;
   Bitset vis_;
 };
 
-}
+}  // namespace alaya
