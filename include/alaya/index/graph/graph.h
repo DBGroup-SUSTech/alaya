@@ -1,10 +1,11 @@
 #pragma once
 
 #include <vector>
+#include <memory>
 
 #include "upper_layer.h"
-#include "../index.h"
-#include "../../utils/metric_type.h"
+#include "alaya/index/index.h"
+#include "alaya/utils/metric_type.h"
 
 namespace alaya {
 
@@ -19,6 +20,19 @@ struct Graph : Index<IDType, DataType> {
   std::vector<IDType> eps_;
 
   Graph() = default;
+
+  const int *edges(int u) const { return linklist_ + edge_num_ * u; }
+
+  int *edges(int u) { return linklist_ + edge_num_ * u; }
+
+  IDType at(int i, int j) const { return linklist_[i * edge_num_ + j]; }
+
+  IDType &at(int i, int j) { return linklist_[i * edge_num_ + j]; }
+
+  // todo: 预期能改善性能，需要提供预取函数
+//  void prefetch(int u, int lines) const {
+//    mem_prefetch((char *)edges(u), lines);
+//  }
 
 };
 
