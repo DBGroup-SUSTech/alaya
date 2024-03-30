@@ -19,8 +19,9 @@ struct Bucket : Index<IDType, DataType> {
   std::vector<std::pair<int, DataType>> order_list_;
   std::map<IDType, IDType>
       id_maps_;  // unsure to use.  mapping for original id to local id is stored
+  explicit Bucket() {}
 
-  Bucket<IDType, DataType>(const int bucket_num, MetricType metric, const int data_dim)
+  explicit Bucket(const int bucket_num, MetricType metric, const int data_dim)
       : bucket_num_(bucket_num), metric_type_(metric), data_dim_(data_dim) {}
 
   ~Bucket() {}

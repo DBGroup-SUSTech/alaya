@@ -17,4 +17,9 @@ void kmeans(const DataType* kData, const IDType kDataNum, const int kDataDim,
             std::vector<std::vector<DataType>>& centroids, const IDType kClusterNum,
             bool init_centroids_norm, const unsigned int kKMeansIter);
 
+template <typename DataType, typename IDType>
+void kmeans(const DataType* kData, const IDType kDataNum, const int kDataDim,
+            const int kSubspaceDim, std::vector<std::vector<std::vector<DataType>>>& centroids,
+            const IDType kClusterNum, bool init_centroids_norm, const unsigned int kKMeansIter);
+
 }  // namespace alaya

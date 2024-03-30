@@ -28,7 +28,7 @@ struct Index {
    */
   explicit Index(int dim, IDType num, std::string_view metric)
       : vec_dim_(dim), vec_num_(num), metric_type_(kMetricMap[metric]) {}
-
+  explicit Index() {}
   /**
    * @brief Construct a new Index object
    *

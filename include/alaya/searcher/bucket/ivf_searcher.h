@@ -7,54 +7,70 @@
 #include <alaya/utils/memory.h>
 
 #include <cstdint>
+#include <cstdio>
+#include <memory>
 
 namespace alaya {
 
 template <typename IDType, typename DataType>
-struct InvertedListSearcher : Searcher<InvertedList<IDType, DataType>, DataType> {
+struct InvertedListSearcher {
   typedef InvertedList<IDType, DataType> IndexType;
   std::unique_ptr<IndexType> index_ = nullptr;
-  //   int64_t query_num_;
   int64_t query_dim_;
-  DataType* query_;
+  const DataType* query_;
   int64_t k_;
-  DataType* distances_;
+  DataType* distances_ = nullptr;
+  ResultPool<IDType, DataType>* res_;
+  // int64_t query_num_;
 
   InvertedListSearcher() = default;
-  ~InvertedListSearcher() = default;
+  ~InvertedListSearcher() {
+    delete res_;
+    printf("InvertedListSearcher destructor\n");
+  };
+  // setup index for search
+  void SetIndex(const IndexType& index) { this->index_ = std::make_unique<IndexType>(index); }
 
-  void SetIndex(const IndexType& index) override {
-    this->index_ = std::make_unique<IndexType>(index);
-  }
-
-  void Search(int64_t query_dim, DataType* query, int64_t k, DataType* distances,
-              int64_t* labels) override {
-    // query_num_ = query_num;
-    ResultPool<IDType, DataType> res(index_->data_num_, 2 * k, k);
+  // main search function
+  void Search(int64_t query_num, int64_t query_dim, const DataType* query, int64_t k,
+              DataType* distances, int64_t* labels) {
+    printf("begin search\n");
+    // init result pool
+    res_ = new ResultPool<IDType, DataType>(index_->data_num_, 2 * k, k);
     assert(query_dim == index_->data_dim_ && "Query dimension must be equal to data dimension.");
     query_dim_ = query_dim;
     query_ = query;
     k_ = k;
+    distances_ = distances;
+
+    // init search ordered list
     InitSearcher(query);
+
     int ordered_bucket_id = 0;
     for (int i = 0; i < index_->bucket_num_; ++i) {
       ordered_bucket_id = index_->order_list_[i].first;
+      printf("ordered_bucket_id = %d\n", ordered_bucket_id);
+
       DataType* data_point = index_->buckets_[ordered_bucket_id].data();
       PrefetchL1(data_point);
       auto& id_list = index_->id_buckets_[ordered_bucket_id];
-      auto DistFunc = GetDistanceFunc(index_->metric_type_);
+      DataType dist = 0;
       for (int j = 0; j < id_list.size(); ++j) {
-        DataType dist = DistFunc(query_, data_point + j * query_dim_, query_dim_);
-        res.Insert(id_list[j], dist);
+        dist = L2Sqr<DataType>(query_, data_point + j * query_dim_, query_dim_);
+        res_->Insert(id_list[j], dist);
       }
     }
+    printf("after inserting ids\n");
 
     for (int i = 0; i < k; ++i) {
-      distances_[i] = res.result_.pool_[i].dis;
-      std::cout << res.result_.pool_[i].id << " " << res.result_.pool_[i].dis << std::endl;
+      distances_[i] = res_->result_.pool_[i].dis_;
+      printf("%d %f\n", res_->result_.pool_[i].id_, res_->result_.pool_[i].dis_);
+      // std::cout << res.result_.pool_[i].id_ << " " << res.result_.pool_[i].dis_ << std::endl;
     }
+
+    printf("Search finished\n");
   }
-  void InitSearcher(DataType* query) {
+  void InitSearcher(const DataType* query) {
     query_ = query;
     PrefetchL1(index_->centroids_data_);
     InitOrderList();
@@ -67,10 +83,8 @@ struct InvertedListSearcher : Searcher<InvertedList<IDType, DataType>, DataType>
   void InitOrderList() {
     for (int i = 0; i < index_->bucket_num_; i++) {
       index_->order_list_[i].first = i;
-      auto DistFunc = GetDistanceFunc(index_->metric_type_);
-      index_->order_list_[i].second =
-          DistFunc(query_, index_->centroids_data_ + i * index_->data_dim_, index_->data_dim_,
-                   index_->metric_type_);
+      index_->order_list_[i].second = L2Sqr<DataType>(
+          query_, index_->centroids_data_ + i * index_->data_dim_, index_->data_dim_);
     }
   }
 };

@@ -1,6 +1,7 @@
 #pragma once
 #include <alaya/index/bucket/bucket.h>
 #include <alaya/utils/distance.h>
+#include <alaya/utils/kmeanss.h>
 #include <alaya/utils/memory.h>
 #include <alaya/utils/metric_type.h>
 
@@ -21,11 +22,11 @@ struct InvertedList : Bucket<IDType, DataType> {
   int data_dim_;                          // vector dimension
   IDType data_num_;                       // total number of indexed vectors
   MetricType metric_type_;                // type of metric this index uses for index building
-  int bucket_num_;                        // cluster number
-  DataType* data_ = nullptr;              // input vector base data
-  int clustering_iter_;                   // max kmeans iterations
+  unsigned int bucket_num_;               // cluster number
+  const DataType* data_ = nullptr;        // input vector base data
+  unsigned int clustering_iter_;          // max kmeans iterations
   std::vector<int> nearest_centroid_id_;  // nearest_centroid_id_
-  DataType centroids_data_ = nullptr;     // centroid data ptr
+  DataType* centroids_data_ = nullptr;    // centroid data ptr
 
   std::vector<std::vector<float>>
       centroids_;  // array for centroids, each centroids data is stored in one dimension
@@ -47,8 +48,8 @@ struct InvertedList : Bucket<IDType, DataType> {
    * @param data_dim  vector dimension
    * @param clustering_iter  max kmeans iterations
    */
-  InvertedList<IDType, DataType>(const int bucket_num, MetricType metric, const int data_dim,
-                                 const int clustering_iter)
+  explicit InvertedList(const int bucket_num, MetricType metric, const int data_dim,
+                        const int clustering_iter)
       : bucket_num_(bucket_num),
         metric_type_(metric),
         data_dim_(data_dim),
@@ -59,11 +60,12 @@ struct InvertedList : Bucket<IDType, DataType> {
   void GetNearestCentroidIds() {
 #pragma omp parallel for
     for (IDType i = 0; i < data_num_; ++i) {
-      DataType min_dist = std::numeric_limits<int>::max();
+      DataType min_dist = std::numeric_limits<DataType>::max();
       for (int j = 0; j < bucket_num_; ++j) {
-        auto distFunc = GetDistFunc<DataType, false>(metric_type_);
-        assert(distFunc != nullptr || !"metric_type invalid!");
-        DataType dist = distFunc(data_ + i * data_dim_, centroids_[j].data(), data_dim_);
+        // auto distFunc = GetDistFunc<DataType, false>(metric_type_);
+        // assert(distFunc != nullptr || !"metric_type invalid!");
+        // DataType dist = distFunc(data_ + i * data_dim_, centroids_[j].data(), data_dim_);
+        DataType dist = L2Sqr<DataType>(data_ + i * data_dim_, centroids_[j].data(), data_dim_);
         if (dist < min_dist) {
           min_dist = dist;
           nearest_centroid_id_[i] = j;
@@ -88,8 +90,8 @@ struct InvertedList : Bucket<IDType, DataType> {
       DataType* single_data_ptr = buckets_[i].data();
       // copy all data according to the id in the id_bucket from data_ to buckets[i]
       for (int j = 0; j < id_buckets_[i].size(); ++j) {
-        DataType* v_begin = data_ + id_buckets_[i][j] * data_dim_;
-        DataType* v_end = v_begin + data_dim_;
+        const DataType* v_begin = data_ + id_buckets_[i][j] * data_dim_;
+        const DataType* v_end = v_begin + data_dim_;
         // copy data from v_begin to v_end to single_data_ptr aka buckets_[i].data()
         std::copy(v_begin, v_end, single_data_ptr);
         single_data_ptr += data_dim_;
@@ -110,7 +112,8 @@ struct InvertedList : Bucket<IDType, DataType> {
     centroids_.resize(0);
 
     // compute the centroids
-    utils::kmeans(data_, data_num_, data_dim_, centroids_, bucket_num_, clustering_iter_);
+    kmeans<DataType, IDType>(data_, data_num_, data_dim_, centroids_, bucket_num_, false,
+                             clustering_iter_);
 
     printf("[Report] - kmeans over\n");
 
@@ -120,8 +123,7 @@ struct InvertedList : Bucket<IDType, DataType> {
     GetNearestCentroidIds();
 
     FillIndex();
-
-    centroids_data_ = Alloc64B(bucket_num_ * data_dim_ * sizeof(DataType));
+    centroids_data_ = (DataType*)Alloc64B(bucket_num_ * data_dim_ * sizeof(DataType));
 #pragma omp parallel for
     for (size_t i = 0; i < bucket_num_; ++i) {
       std::copy(centroids_[i].begin(), centroids_[i].end(), centroids_data_ + i * data_dim_);
@@ -145,14 +147,15 @@ struct InvertedList : Bucket<IDType, DataType> {
     nearest_centroid_id_.resize(data_num);
     centroids_.resize(0);
 
-// init id_map_, original id to local id is stored
-#pragma omp parallel for
-    for (int i = 0; i < data_num_; ++i) {
-      id_maps_[data_ids + i] = i;
-    }
+    // init id_map_, original id to local id is stored
+    // #pragma omp parallel for
+    //         for (int i = 0; i < data_num_; ++i)
+    //         {
+    //             id_maps_[data_ids + i] = i;
+    //         }
 
     // compute the centroids
-    utils::kmeans(data_, data_num_, data_dim_, centroids_, bucket_num_, clustering_iter_);
+    kmeans(data_, data_num_, data_dim_, centroids_, bucket_num_, clustering_iter_);
 
     printf("[Report] - kmeans over\n");
     printf("[Report] - cluster number is: %zu\n", static_cast<size_t>(bucket_num_));
@@ -161,8 +164,7 @@ struct InvertedList : Bucket<IDType, DataType> {
     GetNearestCentroidIds();
 
     FillIndex();
-
-    centroids_data_ = Alloc64B(bucket_num_ * data_dim_ * sizeof(DataType));
+    centroids_data_ = (DataType*)Alloc64B(bucket_num_ * data_dim_ * sizeof(DataType));
 
 // replace ids with actual ids
 #pragma omp parallel for
@@ -211,8 +213,8 @@ struct InvertedList : Bucket<IDType, DataType> {
     }
     // write each bucket size and id_buckets
     for (int i = 0; i < bucket_num_; i++) {
-      uint32_t each_bucket_size = static_cast<uint32_t>(id_buckets_[i].size());
-      output.write((char*)&each_bucket_size, sizeof(uint32_t));
+      int each_bucket_size = id_buckets_[i].size();
+      output.write((char*)&each_bucket_size, sizeof(int));
       output.write((char*)id_buckets_[i].data(), sizeof(IDType) * each_bucket_size);
       output.write((char*)buckets_[i].data(), sizeof(DataType) * each_bucket_size * data_dim_);
     }
@@ -246,22 +248,26 @@ struct InvertedList : Bucket<IDType, DataType> {
     order_list_.resize(bucket_num_);
 
     for (int i = 0; i < bucket_num_; ++i) {
+      centroids_[i].resize(data_dim_);
       input.read((char*)centroids_[i].data(), data_dim_ * sizeof(DataType));
     }
 
     for (int i = 0; i < bucket_num_; ++i) {
-      uint32_t each_bucket_size = 0;
-      input.read((char*)&each_bucket_size, sizeof(uint32_t));
+      int each_bucket_size = 0;
+      input.read((char*)&each_bucket_size, sizeof(int));
+      printf("each bucket size = %d\n", each_bucket_size);
+      id_buckets_[i].resize(each_bucket_size);
+      buckets_[i].resize(each_bucket_size * data_dim_);
       input.read((char*)id_buckets_[i].data(), sizeof(IDType) * each_bucket_size);
       input.read((char*)buckets_[i].data(), sizeof(DataType) * each_bucket_size * data_dim_);
     }
 
-    centroids_data_ = Alloc64B(bucket_num_ * data_dim_ * sizeof(DataType));
+    centroids_data_ = (DataType*)Alloc64B(bucket_num_ * data_dim_ * sizeof(DataType));
+
 #pragma omp parallel for
     for (size_t i = 0; i < bucket_num_; ++i) {
       std::copy(centroids_[i].begin(), centroids_[i].end(), centroids_data_ + i * data_dim_);
     }
-
     printf("[Report] - reading index complete!\n");
 
     input.close();

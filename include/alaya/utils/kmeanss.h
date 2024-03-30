@@ -1,12 +1,13 @@
+#pragma once
 #include <alaya/utils/distance.h>
-#include <alaya/utils/kmeans.h>
 #include <alaya/utils/random_utils.h>
 #include <fmt/core.h>
 
+#include <iostream>
 #include <limits>
 
 namespace alaya {
-template <typename DataType, typename IDType = unsigned>
+template <typename DataType, typename IDType>
 void InitCentroidsByNorm(const DataType* kData, const IDType kDataNum, const IDType kDataDim,
                          std::vector<std::vector<DataType>>& centroids,
                          const unsigned kClusterNum) {
@@ -26,7 +27,7 @@ void InitCentroidsByNorm(const DataType* kData, const IDType kDataNum, const IDT
   }
 }
 
-template <typename DataType, typename IDType = unsigned>
+template <typename DataType, typename IDType>
 void kmeans(const DataType* kData, const IDType kDataNum, const int kDataDim,
             std::vector<std::vector<DataType>>& centroids, const IDType kClusterNum,
             bool init_centroids_norm, const unsigned int kKMeansIter) {
