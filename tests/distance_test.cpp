@@ -38,7 +38,7 @@ TEST(InnerProductTest, AlignNetflix) {
   unsigned d_num, d_dim, q_num, q_dim;
   float *data, *query;
   alaya::AlignLoadVecsDataset<float>(netflix_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
-  unsigned align_dim = alaya::DoAlign(d_dim, 16);
+  unsigned align_dim = alaya::DoAlign(d_dim, alaya::kAlgin16);
 
   int num_test = 100;
   for (int i = 0; i < num_test; ++i) {

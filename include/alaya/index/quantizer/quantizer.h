@@ -17,8 +17,8 @@ namespace alaya {
  * @tparam CodeType
  * @tparam DataType
  */
-template <unsigned CodeBits = 8, typename IDType = int64_t, typename DataType = float>
-struct Quantizer : Index<IDType, DataType> {
+template <unsigned CodeBits = 8, typename DataType = float, typename IDType = int64_t>
+struct Quantizer : Index<DataType, IDType> {
   using CodeType = DependentBitsType<CodeBits>;
   static constexpr auto book_size_ = GetMaxIntegral(CodeBits);
   unsigned book_num_;                ///<
@@ -28,8 +28,10 @@ struct Quantizer : Index<IDType, DataType> {
 
   Quantizer() = default;
 
-  Quantizer(int vec_dim, IDType vec_num, MetricType metric)
-      : Index<IDType, DataType>(vec_dim, vec_num, metric) {}
+  Quantizer(int vec_dim, MetricType metric) : Index<DataType, IDType>(vec_dim, metric) {}
+
+  Quantizer(int vec_dim, int align_num, MetricType metric)
+      : Index<DataType, IDType>(vec_dim, align_num, metric) {}
 
   /**
    * @brief
@@ -45,6 +47,8 @@ struct Quantizer : Index<IDType, DataType> {
   template <typename Pool>
   void Reorder(const Pool& pool, const DataType* query, const DataType* data, int64_t k,
                DataType* distances, int64_t* labels){};
+
+  virtual void Encode() {}
 
   /**
    * @brief
