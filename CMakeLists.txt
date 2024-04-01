@@ -18,6 +18,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   link_libraries(c++)
 endif()
 
+find_package(SQLite3 REQUIRED)
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -61,6 +63,10 @@ enable_testing()
 add_executable(distance_test tests/distance_test.cpp)
 target_link_libraries(distance_test alaya GTest::gtest_main)
 
+add_executable(tableschema_test tests/tableschema_test.cpp)
+target_link_libraries(tableschema_test alaya GTest::gtest_main)
+target_link_libraries(tableschema_test SQLite::SQLite3)
+
 add_executable(
   hello_test
   tests/hello_test.cpp
@@ -70,8 +76,10 @@ target_link_libraries(
   GTest::gtest_main
 )
 
+
 include(GoogleTest)
 gtest_discover_tests(distance_test)
+gtest_discover_tests(tableschema_test)
 gtest_discover_tests(hello_test)
 
 
