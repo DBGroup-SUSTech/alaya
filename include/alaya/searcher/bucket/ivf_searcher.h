@@ -3,8 +3,8 @@
 #include <alaya/index/bucket/ivf.h>
 #include <alaya/searcher/searcher.h>
 #include <alaya/utils/distance.h>
-#include <alaya/utils/heap.h>
 #include <alaya/utils/memory.h>
+#include <alaya/utils/pool.h>
 
 #include <cstdint>
 #include <cstdio>
@@ -21,6 +21,7 @@ struct InvertedListSearcher {
   int64_t k_;
   DataType* distances_ = nullptr;
   ResultPool<IDType, DataType>* res_;
+  DistFunc<DataType, DataType, DataType> dist_func_;
   // int64_t query_num_;
 
   InvertedListSearcher() = default;
@@ -34,10 +35,11 @@ struct InvertedListSearcher {
   // main search function
   void Search(int64_t query_num, int64_t query_dim, const DataType* query, int64_t k,
               DataType* distances, int64_t* labels) {
+    dist_func_ = GetDistFunc<DataType, false>(index_->metric_type_);
     printf("begin search\n");
     // init result pool
-    res_ = new ResultPool<IDType, DataType>(index_->data_num_, 2 * k, k);
-    assert(query_dim == index_->data_dim_ && "Query dimension must be equal to data dimension.");
+    res_ = new ResultPool<IDType, DataType>(index_->vec_num_, 2 * k, k);
+    assert(query_dim == index_->vec_dim_ && "Query dimension must be equal to data dimension.");
     query_dim_ = query_dim;
     query_ = query;
     k_ = k;
@@ -56,7 +58,7 @@ struct InvertedListSearcher {
       auto& id_list = index_->id_buckets_[ordered_bucket_id];
       DataType dist = 0;
       for (int j = 0; j < id_list.size(); ++j) {
-        dist = L2Sqr<DataType>(query_, data_point + j * query_dim_, query_dim_);
+        dist = dist_func_(query_, data_point + j * query_dim_, query_dim_);
         res_->Insert(id_list[j], dist);
       }
     }
@@ -72,7 +74,7 @@ struct InvertedListSearcher {
   }
   void InitSearcher(const DataType* query) {
     query_ = query;
-    PrefetchL1(index_->centroids_data_);
+    PrefetchL1(index_->centroids_);
     InitOrderList();
     std::sort(index_->order_list_.begin(), index_->order_list_.end(),
               [](const std::pair<int, DataType>& a, const std::pair<int, DataType>& b) {
@@ -83,8 +85,8 @@ struct InvertedListSearcher {
   void InitOrderList() {
     for (int i = 0; i < index_->bucket_num_; i++) {
       index_->order_list_[i].first = i;
-      index_->order_list_[i].second = L2Sqr<DataType>(
-          query_, index_->centroids_data_ + i * index_->data_dim_, index_->data_dim_);
+      index_->order_list_[i].second =
+          dist_func_(query_, index_->centroids_ + i * index_->vec_dim_, index_->vec_dim_);
     }
   }
 };

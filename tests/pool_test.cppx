@@ -1,3 +1,5 @@
+#include "../include/alaya/utils/pool.h"
+
 #include <alaya/searcher/bucket/ivf_searcher.h>
 #include <fmt/format.h>
 
@@ -6,11 +8,10 @@
 #include <string>
 #include <vector>
 
-#include "../include/alaya/utils/heap.h"
 #include "alaya/index/bucket/imi.h"
 #include "alaya/index/bucket/ivf.h"
-#include "alaya/utils/heap.h"
 #include "alaya/utils/metric_type.h"
+#include "alaya/utils/pool.h"
 #include "fmt/core.h"
 // TODO  delete
 

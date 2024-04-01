@@ -1,71 +1,54 @@
 #pragma once
 #include <alaya/index/bucket/bucket.h>
 #include <alaya/utils/distance.h>
-#include <alaya/utils/kmeanss.h>
 #include <alaya/utils/memory.h>
 #include <alaya/utils/metric_type.h>
+#include <faiss/Clustering.h>
 
-#include <cassert>
-#include <cstdint>
 #include <fstream>
 #include <iostream>
-#include <iterator>
 #include <limits>
-#include <map>
-#include <unordered_map>
 #include <vector>
 
 namespace alaya {
 
 template <typename IDType, typename DataType>
 struct InvertedList : Bucket<IDType, DataType> {
-  int data_dim_;                          // vector dimension
-  IDType data_num_;                       // total number of indexed vectors
-  MetricType metric_type_;                // type of metric this index uses for index building
-  unsigned int bucket_num_;               // cluster number
   const DataType* data_ = nullptr;        // input vector base data
   unsigned int clustering_iter_;          // max kmeans iterations
   std::vector<int> nearest_centroid_id_;  // nearest_centroid_id_
-  DataType* centroids_data_ = nullptr;    // centroid data ptr
+  // DataType* centroids_data_ = nullptr;    // centroid data ptr
 
-  std::vector<std::vector<float>>
-      centroids_;  // array for centroids, each centroids data is stored in one dimension
-  std::vector<std::vector<DataType>>
-      buckets_;  // array for buckets, vector data are stored in each bucket
-  std::vector<std::vector<IDType>>
-      id_buckets_;  // array for buckets, vector ids are stored in each bucket
-  // array for query to order the list of centroids based on distance
-  std::vector<std::pair<int, DataType>> order_list_;
+  DataType* centroids_ =
+      nullptr;  // array for centroids, each centroids data is stored in one dimension
 
-  std::unordered_map<IDType, IDType>
-      id_maps_;  // unsure to use.  mapping for original id to local id is stored
+  DistFunc<DataType, DataType, DataType> dist_func_;
 
   /**
    * @brief Construct a new InvertedList<ID Type,  Data Type> object
    *
    * @param bucket_num  cluster number
    * @param metric  type of metric this index uses for index building
-   * @param data_dim  vector dimension
+   * @param vec_dim  vector dimension
    * @param clustering_iter  max kmeans iterations
    */
-  explicit InvertedList(const int bucket_num, MetricType metric, const int data_dim,
-                        const int clustering_iter)
-      : bucket_num_(bucket_num),
-        metric_type_(metric),
-        data_dim_(data_dim),
-        clustering_iter_(clustering_iter) {}
+  explicit InvertedList(const int bucket_num, MetricType metric, const int vec_dim)
+      : Bucket<IDType, DataType>(bucket_num, metric, vec_dim),
+        dist_func_(GetDistFunc<DataType, false>(metric)) {}
 
   ~InvertedList() {}
 
   void GetNearestCentroidIds() {
 #pragma omp parallel for
-    for (IDType i = 0; i < data_num_; ++i) {
+    for (IDType i = 0; i < this->vec_num_; ++i) {
       DataType min_dist = std::numeric_limits<DataType>::max();
-      for (int j = 0; j < bucket_num_; ++j) {
+      for (int j = 0; j < this->bucket_num_; ++j) {
         // auto distFunc = GetDistFunc<DataType, false>(metric_type_);
         // assert(distFunc != nullptr || !"metric_type invalid!");
-        // DataType dist = distFunc(data_ + i * data_dim_, centroids_[j].data(), data_dim_);
-        DataType dist = L2Sqr<DataType>(data_ + i * data_dim_, centroids_[j].data(), data_dim_);
+        // DataType dist = distFunc(data_ + i * vec_dim_, centroids_[j].data(), vec_dim_);
+        // DataType dist = L2Sqr<DataType>(data_ + i * vec_dim_, centroids_[j].data(), vec_dim_);
+        DataType dist =
+            dist_func_(data_ + i * this->vec_dim_, centroids_ + j * this->vec_dim_, this->vec_dim_);
         if (dist < min_dist) {
           min_dist = dist;
           nearest_centroid_id_[i] = j;
@@ -75,115 +58,107 @@ struct InvertedList : Bucket<IDType, DataType> {
   }
   void FillIndex() {
     // fill id bucket with bucket num of each vector
-    id_buckets_.resize(bucket_num_);
-    for (IDType i = 0; i < data_num_; ++i) {
-      id_buckets_[nearest_centroid_id_[i]].emplace_back(i);
+    this->id_buckets_.resize(this->bucket_num_);
+    for (IDType i = 0; i < this->vec_num_; ++i) {
+      this->id_buckets_[nearest_centroid_id_[i]].emplace_back(i);
     }
     // fill vector bucket with bucket num of each vector
-    buckets_.resize(bucket_num_);
+    this->buckets_.resize(this->bucket_num_);
 
 #pragma omp parallel for
     // get each bucket
-    for (IDType i = 0; i < bucket_num_; ++i) {
-      buckets_[i].resize(id_buckets_[i].size() * data_dim_);
+    for (IDType i = 0; i < this->bucket_num_; ++i) {
+      this->buckets_[i].resize(this->id_buckets_[i].size() * this->vec_dim_);
       // get the beginning ptr of each bucket
-      DataType* single_data_ptr = buckets_[i].data();
+      DataType* single_data_ptr = this->buckets_[i].data();
       // copy all data according to the id in the id_bucket from data_ to buckets[i]
-      for (int j = 0; j < id_buckets_[i].size(); ++j) {
-        const DataType* v_begin = data_ + id_buckets_[i][j] * data_dim_;
-        const DataType* v_end = v_begin + data_dim_;
+      for (int j = 0; j < this->id_buckets_[i].size(); ++j) {
+        const DataType* v_begin = data_ + this->id_buckets_[i][j] * this->vec_dim_;
+        const DataType* v_end = v_begin + this->vec_dim_;
         // copy data from v_begin to v_end to single_data_ptr aka buckets_[i].data()
         std::copy(v_begin, v_end, single_data_ptr);
-        single_data_ptr += data_dim_;
+        single_data_ptr += this->vec_dim_;
       }
     }
   }
 
   /**
-   * @brief Based on the data_num and the data array pointer to build an ivf index
+   * @brief Based on the vec_num and the data array pointer to build an ivf index
    *
-   * @param data_num  number of data items of input data
+   * @param vec_num  number of data items of input data
    * @param data_ptr  data array pointer
    */
-  void BuildIndex(IDType data_num, const DataType* data_ptr) override {
-    data_num_ = data_num;
+  void BuildIndex(IDType vec_num, const DataType* data_ptr) override {
+    this->vec_num_ = vec_num;
     data_ = data_ptr;
-    nearest_centroid_id_.resize(data_num);
-    centroids_.resize(0);
+    nearest_centroid_id_.resize(vec_num);
+    centroids_ = (DataType*)Alloc64B(sizeof(DataType) * this->bucket_num_ * this->vec_dim_);
 
     // compute the centroids
-    kmeans<DataType, IDType>(data_, data_num_, data_dim_, centroids_, bucket_num_, false,
-                             clustering_iter_);
-
+    auto kmeans_err = faiss::kmeans_clustering(this->vec_dim_, this->vec_num_, this->bucket_num_,
+                                               data_, (float*)centroids_);
+    // kmeans<DataType, IDType>(data_, vec_num_, vec_dim_, centroids_, bucket_num_, false,
+    //                          clustering_iter_);
     printf("[Report] - kmeans over\n");
 
-    printf("[Report] - cluster number is: %zu\n", static_cast<size_t>(bucket_num_));
-    assert(bucket_num_ == centroids_.size() || !"cluster number do not match!");
+    printf("[Report] - cluster number is: %zu\n", static_cast<size_t>(this->bucket_num_));
 
     GetNearestCentroidIds();
 
     FillIndex();
-    centroids_data_ = (DataType*)Alloc64B(bucket_num_ * data_dim_ * sizeof(DataType));
-#pragma omp parallel for
-    for (size_t i = 0; i < bucket_num_; ++i) {
-      std::copy(centroids_[i].begin(), centroids_[i].end(), centroids_data_ + i * data_dim_);
-    }
-
-    order_list_.resize(bucket_num_);
+    this->order_list_.resize(this->bucket_num_);
     printf("[Report] - build data bucket complete!\n");
   }
 
   /**
    * @brief Build an index of the input data, and replace the fake ids with actual ids in data_ids
    *
-   * @param data_num  number of data items of input data
+   * @param vec_num  number of data items of input data
    * @param data_ids  actual ids of the input data
    * @param data_ptr  data array pointer
    */
-  void BuildIndexWithIds(IDType data_num, const IDType* data_ids,
+  void BuildIndexWithIds(IDType vec_num, const IDType* data_ids,
                          const DataType* data_ptr) override {
-    data_num_ = data_num;
+    this->vec_num_ = vec_num;
     data_ = data_ptr;
-    nearest_centroid_id_.resize(data_num);
-    centroids_.resize(0);
+    nearest_centroid_id_.resize(vec_num);
+    centroids_ = (DataType*)Alloc64B(sizeof(DataType) * this->bucket_num_ * this->vec_dim_);
 
     // init id_map_, original id to local id is stored
     // #pragma omp parallel for
-    //         for (int i = 0; i < data_num_; ++i)
+    //         for (int i = 0; i < vec_num_; ++i)
     //         {
     //             id_maps_[data_ids + i] = i;
     //         }
 
     // compute the centroids
-    kmeans(data_, data_num_, data_dim_, centroids_, bucket_num_, clustering_iter_);
+    auto kmeans_err = faiss::kmeans_clustering(this->vec_dim_, this->vec_num_, this->bucket_num_,
+                                               data_, (float*)centroids_);
 
     printf("[Report] - kmeans over\n");
-    printf("[Report] - cluster number is: %zu\n", static_cast<size_t>(bucket_num_));
-    assert(bucket_num_ == centroids_.size() || !"cluster number do not match!");
+    printf("[Report] - cluster number is: %zu\n", static_cast<size_t>(this->bucket_num_));
 
     GetNearestCentroidIds();
 
     FillIndex();
-    centroids_data_ = (DataType*)Alloc64B(bucket_num_ * data_dim_ * sizeof(DataType));
 
 // replace ids with actual ids
 #pragma omp parallel for
-    for (int i = 0; i < bucket_num_; ++i) {
-      for (int j = 0; j < id_buckets_[i].size(); ++j) {
-        IDType fake_id = id_buckets_[i][j];
-        id_buckets_[i][j] = *(data_ids + fake_id);
+    for (int i = 0; i < this->bucket_num_; ++i) {
+      for (int j = 0; j < this->id_buckets_[i].size(); ++j) {
+        IDType fake_id = this->id_buckets_[i][j];
+        this->id_buckets_[i][j] = *(data_ids + fake_id);
       }
-      std::copy(centroids_[i].begin(), centroids_[i].end(), centroids_data_ + i * data_dim_);
     }
 
-    order_list_.resize(bucket_num_);
+    this->order_list_.resize(this->bucket_num_);
     printf("[Report] - build data bucket complete!\n");
 
     // vec_ids 到最后进行一个替换即可
   }
 
   // index file structure:
-  // metadata:   | data_num_ | data_dim_ | bucket_num_ |
+  // metadata:   | vec_num_ | vec_dim_ | bucket_num_ |
   // centroids:  | centroid0 | centroid1 | centroid2 | ...
   // buckets:
   // | bucket0 size_ |  point ids in 0 | data in 0
@@ -202,21 +177,21 @@ struct InvertedList : Bucket<IDType, DataType> {
     }
 
     printf("[Report] - cluster number: %zu, starting to save index...\n",
-           static_cast<size_t>(bucket_num_));
-    output.write((char*)&data_num_, sizeof(IDType));
-    output.write((char*)&data_dim_, sizeof(int));
+           static_cast<size_t>(this->bucket_num_));
+    output.write((char*)&this->vec_num_, sizeof(IDType));
+    output.write((char*)&this->vec_dim_, sizeof(int));
     // write bucket_num_
-    output.write((char*)&bucket_num_, sizeof(int));
+    output.write((char*)&this->bucket_num_, sizeof(int));
     // write all centroids
-    for (int i = 0; i < bucket_num_; ++i) {
-      output.write((char*)centroids_[i].data(), data_dim_ * sizeof(DataType));
-    }
+    output.write((char*)centroids_, this->vec_dim_ * this->bucket_num_ * sizeof(DataType));
+
     // write each bucket size and id_buckets
-    for (int i = 0; i < bucket_num_; i++) {
-      int each_bucket_size = id_buckets_[i].size();
+    for (int i = 0; i < this->bucket_num_; i++) {
+      int each_bucket_size = this->id_buckets_[i].size();
       output.write((char*)&each_bucket_size, sizeof(int));
-      output.write((char*)id_buckets_[i].data(), sizeof(IDType) * each_bucket_size);
-      output.write((char*)buckets_[i].data(), sizeof(DataType) * each_bucket_size * data_dim_);
+      output.write((char*)this->id_buckets_[i].data(), sizeof(IDType) * each_bucket_size);
+      output.write((char*)this->buckets_[i].data(),
+                   sizeof(DataType) * each_bucket_size * this->vec_dim_);
     }
     printf("[Report] - saving index complete!\n");
 
@@ -233,40 +208,29 @@ struct InvertedList : Bucket<IDType, DataType> {
     if (!input.is_open()) {
       throw std::runtime_error("Cannot open file");
     }
-    input.read((char*)&data_num_, sizeof(IDType));
-    input.read((char*)&data_dim_, sizeof(int));
-    input.read((char*)&bucket_num_, sizeof(int));
+    input.read((char*)&this->vec_num_, sizeof(IDType));
+    input.read((char*)&this->vec_dim_, sizeof(int));
+    input.read((char*)&this->bucket_num_, sizeof(int));
 
-    printf(
-        "[Report] - data_num = %zu, data_dim = %zu, bucket_num = %zu, starting to read index...\n",
-        static_cast<size_t>(data_num_), static_cast<size_t>(data_dim_),
-        static_cast<size_t>(bucket_num_));
+    printf("[Report] - vec_num = %zu, vec_dim = %zu, bucket_num = %zu, starting to read index...\n",
+           static_cast<size_t>(this->vec_num_), static_cast<size_t>(this->vec_dim_),
+           static_cast<size_t>(this->bucket_num_));
+    centroids_ = (DataType*)Alloc64B(this->bucket_num_ * this->vec_dim_ * sizeof(DataType));
+    this->id_buckets_.resize(this->bucket_num_);
+    this->buckets_.resize(this->bucket_num_);
+    this->order_list_.resize(this->bucket_num_);
 
-    centroids_.resize(bucket_num_);
-    id_buckets_.resize(bucket_num_);
-    buckets_.resize(bucket_num_);
-    order_list_.resize(bucket_num_);
+    input.read((char*)centroids_, this->bucket_num_ * this->vec_dim_ * sizeof(DataType));
 
-    for (int i = 0; i < bucket_num_; ++i) {
-      centroids_[i].resize(data_dim_);
-      input.read((char*)centroids_[i].data(), data_dim_ * sizeof(DataType));
-    }
-
-    for (int i = 0; i < bucket_num_; ++i) {
+    for (int i = 0; i < this->bucket_num_; ++i) {
       int each_bucket_size = 0;
       input.read((char*)&each_bucket_size, sizeof(int));
       printf("each bucket size = %d\n", each_bucket_size);
-      id_buckets_[i].resize(each_bucket_size);
-      buckets_[i].resize(each_bucket_size * data_dim_);
-      input.read((char*)id_buckets_[i].data(), sizeof(IDType) * each_bucket_size);
-      input.read((char*)buckets_[i].data(), sizeof(DataType) * each_bucket_size * data_dim_);
-    }
-
-    centroids_data_ = (DataType*)Alloc64B(bucket_num_ * data_dim_ * sizeof(DataType));
-
-#pragma omp parallel for
-    for (size_t i = 0; i < bucket_num_; ++i) {
-      std::copy(centroids_[i].begin(), centroids_[i].end(), centroids_data_ + i * data_dim_);
+      this->id_buckets_[i].resize(each_bucket_size);
+      this->buckets_[i].resize(each_bucket_size * this->vec_dim_);
+      input.read((char*)this->id_buckets_[i].data(), sizeof(IDType) * each_bucket_size);
+      input.read((char*)this->buckets_[i].data(),
+                 sizeof(DataType) * each_bucket_size * this->vec_dim_);
     }
     printf("[Report] - reading index complete!\n");
 
