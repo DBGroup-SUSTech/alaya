@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cuda_runtime_api.h>
 #include <faiss/Clustering.h>
+#include <faiss/IndexFlat.h>
 #include <fmt/core.h>
 
 #include <cstddef>
