@@ -12,17 +12,17 @@
 
 namespace alaya {
 
-template <typename IDType, typename DataType>
-struct InvertedList : Bucket<IDType, DataType> {
+template <typename DataType = float, typename IDType = int64_t>
+struct InvertedList : Bucket<DataType, IDType> {
   const DataType* data_ = nullptr;        // input vector base data
   unsigned int clustering_iter_;          // max kmeans iterations
   std::vector<int> nearest_centroid_id_;  // nearest_centroid_id_
   // DataType* centroids_data_ = nullptr;    // centroid data ptr
 
-  DataType* centroids_ =
-      nullptr;  // array for centroids, each centroids data is stored in one dimension
-
+  DataType* centroids_ = nullptr;  // array for centroids
   DistFunc<DataType, DataType, DataType> dist_func_;
+
+  InvertedList() = default;
 
   /**
    * @brief Construct a new InvertedList<ID Type,  Data Type> object
@@ -33,8 +33,10 @@ struct InvertedList : Bucket<IDType, DataType> {
    * @param clustering_iter  max kmeans iterations
    */
   explicit InvertedList(const int bucket_num, MetricType metric, const int vec_dim)
-      : Bucket<IDType, DataType>(bucket_num, metric, vec_dim),
-        dist_func_(GetDistFunc<DataType, false>(metric)) {}
+      : Bucket<DataType, IDType>(bucket_num, metric, vec_dim),
+        dist_func_(GetDistFunc<DataType, false>(metric)) {
+    this->centroids_ = (DataType*)Alloc64B(sizeof(DataType) * this->bucket_num_ * this->vec_dim_);
+  }
 
   ~InvertedList() {}
 
@@ -82,17 +84,10 @@ struct InvertedList : Bucket<IDType, DataType> {
     }
   }
 
-  /**
-   * @brief Based on the vec_num and the data array pointer to build an ivf index
-   *
-   * @param vec_num  number of data items of input data
-   * @param data_ptr  data array pointer
-   */
   void BuildIndex(IDType vec_num, const DataType* data_ptr) override {
     this->vec_num_ = vec_num;
     data_ = data_ptr;
     nearest_centroid_id_.resize(vec_num);
-    centroids_ = (DataType*)Alloc64B(sizeof(DataType) * this->bucket_num_ * this->vec_dim_);
 
     // compute the centroids
     auto kmeans_err = faiss::kmeans_clustering(this->vec_dim_, this->vec_num_, this->bucket_num_,
@@ -106,23 +101,15 @@ struct InvertedList : Bucket<IDType, DataType> {
     GetNearestCentroidIds();
 
     FillIndex();
-    this->order_list_.resize(this->bucket_num_);
+    // this->order_list_.resize(this->bucket_num_);
     printf("[Report] - build data bucket complete!\n");
   }
 
-  /**
-   * @brief Build an index of the input data, and replace the fake ids with actual ids in data_ids
-   *
-   * @param vec_num  number of data items of input data
-   * @param data_ids  actual ids of the input data
-   * @param data_ptr  data array pointer
-   */
   void BuildIndexWithIds(IDType vec_num, const IDType* data_ids,
                          const DataType* data_ptr) override {
     this->vec_num_ = vec_num;
     data_ = data_ptr;
     nearest_centroid_id_.resize(vec_num);
-    centroids_ = (DataType*)Alloc64B(sizeof(DataType) * this->bucket_num_ * this->vec_dim_);
 
     // init id_map_, original id to local id is stored
     // #pragma omp parallel for
@@ -133,7 +120,7 @@ struct InvertedList : Bucket<IDType, DataType> {
 
     // compute the centroids
     auto kmeans_err = faiss::kmeans_clustering(this->vec_dim_, this->vec_num_, this->bucket_num_,
-                                               data_, (float*)centroids_);
+                                               data_, centroids_);
 
     printf("[Report] - kmeans over\n");
     printf("[Report] - cluster number is: %zu\n", static_cast<size_t>(this->bucket_num_));
@@ -147,11 +134,11 @@ struct InvertedList : Bucket<IDType, DataType> {
     for (int i = 0; i < this->bucket_num_; ++i) {
       for (int j = 0; j < this->id_buckets_[i].size(); ++j) {
         IDType fake_id = this->id_buckets_[i][j];
-        this->id_buckets_[i][j] = *(data_ids + fake_id);
+        const IDType* real_id = data_ids + fake_id;
+        this->id_buckets_[i][j] = *real_id;
       }
     }
 
-    this->order_list_.resize(this->bucket_num_);
     printf("[Report] - build data bucket complete!\n");
 
     // vec_ids 到最后进行一个替换即可
@@ -218,7 +205,7 @@ struct InvertedList : Bucket<IDType, DataType> {
     centroids_ = (DataType*)Alloc64B(this->bucket_num_ * this->vec_dim_ * sizeof(DataType));
     this->id_buckets_.resize(this->bucket_num_);
     this->buckets_.resize(this->bucket_num_);
-    this->order_list_.resize(this->bucket_num_);
+    // this->order_list_.resize(this->bucket_num_);
 
     input.read((char*)centroids_, this->bucket_num_ * this->vec_dim_ * sizeof(DataType));
 

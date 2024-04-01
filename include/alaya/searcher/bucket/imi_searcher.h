@@ -1,7 +1,7 @@
 #pragma once
 
 #include <alaya/index/bucket/imi.h>
-#include <alaya/utils/heap.h>
+#include <alaya/utils/pool.h>
 
 #include <cstdio>
 #include <functional>
@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include "alaya/searcher/bucket/ordered_list_merger.h"
+#include "ordered_list_merger.h"
 typedef int ClusterId;
 typedef float Distance;
 typedef std::vector<int> MergedItemIndices;
@@ -105,6 +105,7 @@ struct IMISearcher {
 
   // 这里是从merger_ 中获取最小距离的cell，类似于bfs过程。
   bool TraverseNextMultiIndexCell() {
+    // std::vector<int> cell_coordinates;  保存着每个cell中的cell id
     MergedItemIndices cell_inner_indices;
     printf("print heap_: \n");
     merger_.print_heap();
@@ -148,9 +149,11 @@ struct IMISearcher {
     std::vector<NearestSubspaceCentroids> subspaces_short_lists;
     assert(index_->subspace_cnt_ > 0);
     // printf("begin GetNearestSubspacesCentroids\n");
-    GetNearestSubspacesCentroids(&subspaces_short_lists, 6);  // 在这里调用方法计算
-                                                              // query到每一个子空间的距离，subspaces_short_lists是一个vector，size对应着子空间的个数
-                                                              // 通常是2.
+    GetNearestSubspacesCentroids(
+        &subspaces_short_lists,
+        6);  // 在这里调用方法计算
+             // query到每一个子空间的距离，subspaces_short_lists是一个vector，size对应着子空间的个数
+             // 通常是2.
     // printf("subspaces_short_lists.size():  %lu\n ",subspaces_short_lists.size());
     printf("print short_list\n");
     print_subspaces_short_lists(&subspaces_short_lists);

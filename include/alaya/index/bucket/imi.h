@@ -1,7 +1,7 @@
 #pragma once
 #include <alaya/index/bucket/ivf.h>
-#include <alaya/utils/kmeanss.h>
 #include <alaya/utils/metric_type.h>
+#include <faiss/Clustering.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -18,6 +18,7 @@
 #include <omp.h>
 
 #include <ctime>
+#include <fstream>
 #include <map>
 #include <vector>
 
@@ -55,7 +56,7 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
     cell_data_cnt_.resize(cell_cnt);
     assert(data_dim_ % subspace_cnt_ == 0 || !"please change the subspace number.");
   }
-  typedef std::vector<DataType> Centroids;
+  using Centroids = std::vector<DataType>;
 
   int data_dim_;                    // data dimensions
   IDType data_num_;                 // data numbers
