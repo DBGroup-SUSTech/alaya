@@ -3,9 +3,7 @@
 #include <memory>
 
 #include "../index/index.h"
-// #include "index/graph/graph.h"
-// #include "index/quant/quant.h"
-// #include "index/bucket/bucket.h"
+#include "../utils/pool.h"
 
 namespace alaya {
 
@@ -17,16 +15,20 @@ namespace alaya {
  * @tparam IndexType
  * @tparam DataType
  */
-template <typename IndexType, typename DataType = float>
+template <typename IndexType, typename QuantizerType, typename DataType = float>
 struct Searcher {
-  std::unique_ptr<IndexType> index_ = nullptr;  ///<
+  const IndexType* index_ = nullptr;
+  const QuantizerType* quantizer_ = nullptr;
 
-  /**
-   * @brief Set the index for the searcher
-   *
-   * @param index is the index to be set
-   */
-  virtual void SetIndex(const IndexType& index) = 0;
+  explicit Searcher(const IndexType* index, const QuantizerType* quantizer)
+      : index_(index), quantizer_(quantizer) {}
+
+  // /**
+  //  * @brief Set the index for the searcher
+  //  *
+  //  * @param index is the index to be set
+  //  */
+  // virtual void SetIndex(const IndexType& index) = 0;
 
   /**
    * @brief Pre-optimization process before search
