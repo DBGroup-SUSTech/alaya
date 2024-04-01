@@ -1,7 +1,7 @@
 #pragma once
 
-//#include <cuda_runtime_api.h>
 #include <faiss/Clustering.h>
+#include <faiss/IndexFlat.h>
 #include <fmt/core.h>
 
 #include <cstddef>
@@ -18,21 +18,22 @@
 
 namespace alaya {
 
-template <unsigned CodeBits = 8, typename IDType = int64_t, typename DataType = float>
-struct ProductQuantizer : Quantizer<CodeBits, IDType, DataType> {
+template <unsigned CodeBits = 8, typename DataType = float, typename IDType = int64_t>
+struct ProductQuantizer : Quantizer<CodeBits, DataType, IDType> {
   using CodeType = DependentBitsType<CodeBits>;
-  static constexpr auto kBookSize_ = GetMaxIntegral(CodeBits);
+  constexpr static auto kBookSize_ = GetMaxIntegral(CodeBits);
+  // const unsigned kBookSize_ = GetMaxIntegral(CodeBits);
+  // int algin_dim_;
   std::size_t dist_line_size_;
   DistFunc<DataType, DataType, DataType> dist_func_;
   std::vector<unsigned> sub_dimensions_;
   std::vector<unsigned> sub_vec_start_;
-
-  // std::vector<std::size_t> sub_code_start_;
+  DataType* encode_vecs_ = nullptr;
 
   ProductQuantizer() = default;
 
-  ProductQuantizer(int vec_dim, IDType vec_num, MetricType metric, unsigned book_num)
-      : Quantizer<CodeBits, IDType, DataType>(vec_dim, vec_num, metric),
+  ProductQuantizer(int vec_dim, MetricType metric, unsigned book_num)
+      : Quantizer<CodeBits, DataType, IDType>(vec_dim, kAlgin16, metric),
         sub_dimensions_(book_num, (unsigned)vec_dim / book_num),
         sub_vec_start_(book_num, 0),
         dist_func_(GetDistFunc<DataType, false>(metric)) {
@@ -45,8 +46,6 @@ struct ProductQuantizer : Quantizer<CodeBits, IDType, DataType> {
       sub_dimensions_[book_num - 1] += reminder;
     }
 
-    // codes_ = vec_num * book_num_
-    this->codes_ = (CodeType*)Alloc64B(sizeof(CodeType) * vec_num * book_num);
     // code_dist_ = kBookSize_ * book_num
     this->code_dist_ = (DataType*)Alloc64B(sizeof(DataType) * kBookSize_ * book_num);
     // Each codebook has sub_dimensions_ * kBookSize_ elements
@@ -59,7 +58,13 @@ struct ProductQuantizer : Quantizer<CodeBits, IDType, DataType> {
     }
   }
 
+  // ProductQuantizer(ProductQuantizer&& other) noexcept {}
+
   void BuildIndex(IDType vec_num, const DataType* kVecData) override {
+    this->vec_num_ = vec_num;
+    // codes_ = vec_num * book_num_
+    this->codes_ = (CodeType*)Alloc64B(sizeof(CodeType) * vec_num * this->book_num_);
+
     std::vector<std::vector<DataType>> sub_vec(this->book_num_);
 
     for (auto i = 0; i < this->book_num_; ++i) {
@@ -99,6 +104,20 @@ struct ProductQuantizer : Quantizer<CodeBits, IDType, DataType> {
 
   void SetDistFunc(MetricType metric) { dist_func_ = GetDistFunc<DataType, false>(metric); }
 
+  void InitCodeDist(const DataType* kQuery) {
+    auto book_size = this->book_size_;
+    auto sub_dim = this->sub_dimensions_;
+    auto sub_start = this->sub_vec_start_;
+    auto codebook = this->codebook_;
+    auto code_dist = this->code_dist_;
+    for (auto i = 0; i < this->book_num; ++i) {
+      Sgemv(kQuery + sub_start[i], codebook[i].data(), code_dist + i * book_size, sub_dim[i],
+            book_size);
+      // VecMatMul(kQuery + sub_start[i], codebook[i].data(), code_dist + i * book_size, sub_dim[i],
+      //           book_size);
+    }
+  }
+
   DataType operator()(IDType vec_id) const override {
     DataType res = 0;
     CodeType* codes = this->codes_ + vec_id * this->book_num_;
@@ -111,7 +130,9 @@ struct ProductQuantizer : Quantizer<CodeBits, IDType, DataType> {
     return res;
   }
 
-  DataType* Decode(IDType data_id) override { return nullptr; }
+  DataType operator()(IDType vec_id, const DataType* kQuery) const {
+    return dist_func_(kQuery, encode_vecs_ + vec_id * this->algin_dim_, this->algin_dim_);
+  }
 
   DataType* GetCodeWord(IDType data_id) override {
     DataType* vec = new DataType[this->vec_dim_];
@@ -123,6 +144,24 @@ struct ProductQuantizer : Quantizer<CodeBits, IDType, DataType> {
     }
     return vec;
   }
+
+  void Encode() override {
+    if (encode_vecs_) return;
+    encode_vecs_ = (DataType*)Alloc2M(sizeof(DataType) * this->vec_num_ * this->align_dim_);
+#pragma omp parallel for schedule(static)
+    for (auto i = 0; i < this->vec_num_; ++i) {
+      for (auto j = 0; j < this->book_num_; ++j) {
+        std::memcpy(encode_vecs_ + i * this->align_dim_ + sub_vec_start_[j],
+                    this->codebook_[j] + this->codes_[i * this->book_num_ + j] * sub_dimensions_[j],
+                    sub_dimensions_[j] * sizeof(DataType));
+      }
+      // DataType* vec = GetCodeWord(i);
+      // std::memcpy(encode_vecs_ + i * algin_dim_, vec, this->vec_dim_ * sizeof(DataType));
+      // delete[] vec;
+    }
+  }
+
+  DataType* Decode(IDType data_id) override { return nullptr; }
 
   void Save(const char* kFilePath) const override {
     fmt::println("Save PQ index to {}", kFilePath);

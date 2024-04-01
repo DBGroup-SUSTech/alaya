@@ -15,6 +15,8 @@
 
 namespace alaya {
 
+constexpr static int kAlgin16 = 16;
+
 inline constexpr uint64_t DoAlign(uint64_t val, uint64_t align) {
   return (val + align - 1) & (~(align - 1));
 }

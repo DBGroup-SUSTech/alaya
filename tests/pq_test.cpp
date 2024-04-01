@@ -6,17 +6,14 @@
 #include <algorithm>
 #include <iterator>
 
+#include "alaya/utils/random_utils.h"
 #include "gtest/gtest.h"
 
 TEST(ProductQuantizerTest, Constructor) {
-  std::string netflix_path = "/dataset/netflix";
-  unsigned d_num, d_dim, q_num, q_dim;
-  float *data, *query;
-  alaya::LoadVecsDataset<float>(netflix_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
+  unsigned d_num = 1000;
+  unsigned d_dim = 300;
 
-  alaya::ProductQuantizer<8> pq(d_dim, d_num, alaya::MetricType::L2, 8);
-
-  pq.BuildIndex(d_num, data);
+  alaya::ProductQuantizer<8> pq(d_dim, alaya::MetricType::L2, 8);
 
   EXPECT_EQ(8, pq.book_num_);
   EXPECT_EQ(8, pq.sub_dimensions_.size());
@@ -32,4 +29,37 @@ TEST(ProductQuantizerTest, Constructor) {
 
   EXPECT_EQ(256, pq.kBookSize_);
   EXPECT_EQ(8 * 256, pq.dist_line_size_);
+
+  EXPECT_EQ(8, pq.codebook_.size());
+}
+
+TEST(ProductQuantizerTest, BuildIndex) {
+  std::string netflix_path = "/dataset/netflix";
+  unsigned d_num, d_dim, q_num, q_dim;
+  float *data, *query;
+  // alaya::LoadVecsDataset<float>(netflix_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
+  alaya::AlignLoadVecsDataset<float>(netflix_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
+
+  alaya::ProductQuantizer<8> pq(d_dim, alaya::MetricType::L2, 8);
+
+  pq.BuildIndex(d_num, data);
+
+  pq.Encode();
+
+  int vec_num = 10;
+  for (auto i = 0; i < vec_num; ++i) {
+    float err = 0;
+    auto vid = alaya::GenRandInt(0, d_num - 1);
+    for (auto d = 0; d < d_dim; ++d) {
+      err = std::fabs(data[vid * d_dim + d] - pq.encode_vecs_[vid * d_dim + d]);
+    }
+    fmt::println("vid: {}, err: {}", vid, err);
+    for (auto d = 0; d < d_dim; ++d) {
+      fmt::print("dim: {}, data: {:.2f}, code: {:.2f} ", d, data[vid * d_dim + d],
+                 pq.encode_vecs_[vid * d_dim + d]);
+    }
+    fmt::println("\n");
+  }
+
+  delete[] data;
 }
