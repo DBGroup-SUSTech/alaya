@@ -17,7 +17,7 @@ namespace alaya {
  * @return The masked float value read from the data array.
  */
 inline __m128 MaskedReadFloat(const std::size_t dim, const float* data) {
-  assert(0 <= dim && dim < 4);
+  assert(0 < dim && dim < 4);
   ALIGNED(16) float buf[4] = {0, 0, 0, 0};
   switch (dim) {
     case 3:
@@ -38,7 +38,7 @@ inline __m128 MaskedReadFloat(const std::size_t dim, const float* data) {
  * @return The integer value read from the data array.
  */
 inline __m128i MaskedReadInt(const std::size_t dim, const int* data) {
-  assert(0 <= dim && dim < 4);
+  assert(0 < dim && dim < 4);
   ALIGNED(16) int buf[4] = {0, 0, 0, 0};
   switch (dim) {
     case 3:
@@ -90,7 +90,8 @@ inline int32_t ReduceAddI32x4(__m128i x) {
 }
 
 /**
- * Calculates the sum of all elements in a 128-bit vector of unsigned 8-bit integers.
+ * Calculates the sum of all elements in a 128-bit vector of unsigned 8-bit
+ * integers.
  *
  * @param x The input vector of unsigned 8-bit integers.
  * @return The sum of all elements in the input vector.
@@ -115,7 +116,8 @@ inline int32_t ReduceAddI8x16(__m128i x) {
 // }
 
 /**
- * Calculates the squared L2 distance between two float arrays using SSE instructions.
+ * Calculates the squared L2 distance between two float arrays using SSE
+ * instructions.
  *
  * @param kX Pointer to the first float array.
  * @param kY Pointer to the second float array.
@@ -197,7 +199,8 @@ inline float InnerProductFloatSSE(const float* kX, const float* kY, int dim) {
 UNROLL_END
 
 UNROLL_BEGIN
-inline float AlignInnerProductFloatSSE(const float* kX, const float* kY, int dim) {
+inline float AlignInnerProductFloatSSE(const float* kX, const float* kY,
+                                       int dim) {
   __m128 sum128 = _mm_setzero_ps();
 
   const float* kEnd = kX + dim;
@@ -214,7 +217,8 @@ inline float AlignInnerProductFloatSSE(const float* kX, const float* kY, int dim
 UNROLL_END
 
 /**
- * Calculates the squared Euclidean norm of a float array using SSE instructions.
+ * Calculates the squared Euclidean norm of a float array using SSE
+ * instructions.
  *
  * @param pV Pointer to the float array.
  * @param dim The dimension of the array.
@@ -241,18 +245,20 @@ inline float NormSqrFloatSSE(const float* pV, int dim) {
 UNROLL_END
 
 /**
- * Calculates the squared Euclidean norm of a float array using SSE instructions.
+ * Calculates the squared Euclidean norm of a float array using SSE
+ * instructions.
  *
  * @param pV Pointer to the float array.
  * @param dim The dimension of the array.
  * @return The squared Euclidean norm of the array.
  */
-inline float NormSqrTFloatSSE(const float* pV, int dim) {
+inline float NormFloatSSE(const float* pV, int dim) {
   return std::sqrt(NormSqrFloatSSE(pV, dim));
 }
 
 /**
- * Calculates the squared Euclidean norm of a align float array using SSE instructions.
+ * Calculates the squared Euclidean norm of a align float array using SSE
+ * instructions.
  *
  * @param pV Pointer to the float array.
  * @param dim The dimension of the array.
@@ -273,7 +279,7 @@ inline float AlignNormSqrFloatSSE(const float* pV, int dim) {
 }
 UNROLL_END
 
-inline float AlignNormSqrTFloatSSE(const float* pV, int dim) {
+inline float AlignNormFloatSSE(const float* pV, int dim) {
   return std::sqrt(AlignNormSqrFloatSSE(pV, dim));
 }
 

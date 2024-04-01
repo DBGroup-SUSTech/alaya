@@ -9,38 +9,40 @@ namespace alaya {
 /**
  * @brief Abstract structure for an index, supports building index for vectors.
  *
- * @tparam IDType The data type for storing IDs is determined by the number of vectors
-           that need to be indexed, with the default type being int64_t.
+ * @tparam IDType The data type for storing IDs is determined by the number of
+ vectors that need to be indexed, with the default type being int64_t.
  * @tparam DataType The data type for vector data, with the default being float.
  */
-template <typename IDType = int64_t, typename DataType = float>
+template <typename DataType = float, typename IDType = int64_t>
 struct Index {
   int vec_dim_;             ///< Vector dimension
   IDType vec_num_;          ///< The total number of indexed vectors
   MetricType metric_type_;  ///< The type of metric this index uses for index building
 
+  Index() = default;
   /**
    * @brief Construct a new Index object
    *
    * @param dim Dimension of vectors.
-   * @param num Number of vectors to build index.
+  //  * @param num Number of vectors to build index.
    * @param metric_type The type of metric this index uses for index building
    */
-  explicit Index(int dim, IDType num, std::string_view metric)
-      : vec_dim_(dim), vec_num_(num), metric_type_(kMetricMap[metric]) {}
-  explicit Index() {}
-  /**
-   * @brief Construct a new Index object
-   *
-   * @param dim Dimension of vectors.
-   * @param num Number of vectors to build index.
-   * @param metric_type The type of metric this index uses for index building
-   */
-  explicit Index(int dim, IDType num, MetricType metric)
-      : vec_dim_(dim), vec_num_(num), metric_type_(metric) {}
+  explicit Index(int dim, std::string_view metric)
+      : vec_dim_(dim), metric_type_(kMetricMap[metric]) {}
+
+  // /**
+  //  * @brief Construct a new Index object
+  //  *
+  //  * @param dim Dimension of vectors.
+  //  * @param num Number of vectors to build index.
+  //  * @param metric_type The type of metric this index uses for index building
+  //  */
+  // explicit Index(int dim, IDType num, MetricType metric)
+  //     : vec_dim_(dim), vec_num_(num), metric_type_(metric) {}
 
   /**
-   * @brief Destructor, derived classes need to implement their own object destruction process.
+   * @brief Destructor, derived classes need to implement their own object
+   * destruction process.
    *
    */
   virtual ~Index(){};

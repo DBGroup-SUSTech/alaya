@@ -11,6 +11,7 @@ namespace alaya {
 
 /**
  * @brief A unified abstract class for search-related functions
+ * @brief A unified abstract class for search-related functions
  * with an index as a member variable.
  *
  * @tparam IndexType
@@ -34,7 +35,7 @@ struct Searcher {
    *
    * @param num_threads Available threads in the current system
    */
-  virtual void Optimize(int num_threads = 0);
+  virtual void Optimize(int num_threads = 0){};
 
   /**
    * @brief Set ef value
@@ -42,7 +43,7 @@ struct Searcher {
    *
    * @param ef is the number of candidate vertices to be visited by the algorithm.
    */
-  virtual void SetEf(int ef);
+  virtual void SetEf(int ef){};
 
   /**
    * @brief Search query_num query vectors on the index
@@ -58,7 +59,7 @@ struct Searcher {
   virtual void Search(int64_t query_num, int64_t query_dim, const DataType* queries, int64_t k,
                       DataType* distances, int64_t* labels
                       // const SearchParameters* search_params = nullptr
-                      ) = 0;
+  ) const = 0;
 
   /**
    * @brief Destroy the Searcher object

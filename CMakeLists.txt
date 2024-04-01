@@ -23,6 +23,7 @@ include(FetchContent)
 FetchContent_Declare(
   googletest
   URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+  DOWNLOAD_EXTRACT_TIMESTAMP true
 )
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
@@ -30,33 +31,74 @@ FetchContent_MakeAvailable(googletest)
 FetchContent_Declare(
     fmt
     URL https://github.com/fmtlib/fmt/releases/download/10.2.1/fmt-10.2.1.zip
+    DOWNLOAD_EXTRACT_TIMESTAMP true
 )
 FetchContent_MakeAvailable(fmt)
 
 add_compile_options(-march=native)
 
+add_compile_options(-lsqlite3)
+
 find_package(OpenMP REQUIRED)
+
+add_subdirectory(thirdparty)
 
 add_library(alaya
   STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/kmeans.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/random_utils.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/TableSchema.cpp
 )
 target_link_libraries(alaya
   PUBLIC
   OpenMP::OpenMP_CXX
   fmt
+  faiss
 )
-
 target_include_directories(alaya
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+find_package(MKL)
+if(MKL_FOUND)
+  message(STATUS "MKL found")
+  add_compile_definitions(USE_MKL)
+  target_link_libraries(alaya PUBLIC MKL::MKL)
+else()
+  find_package(BLAS)
+  add_compile_definitions(USE_BLAS)
+  target_link_libraries(alaya PUBLIC ${BLAS_LIBRARIES})
+endif()
+
+# add_subdirectory(tests)
+
+# add_executable(test_RQ test_RQ.cpp)
+# target_link_libraries(test_RQ alaya)
+
+# add_executable(test_main test_main.cpp)
+# target_link_libraries(test_main alaya)
 
 enable_testing()
-add_executable(distance_test tests/distance_test.cpp)
-target_link_libraries(distance_test alaya GTest::gtest_main)
+add_executable(
+  distance_test
+  tests/distance_test.cpp
+)
+target_link_libraries(
+  distance_test
+  alaya
+  GTest::gtest_main
+)
+
+add_executable(
+  pq_test
+  tests/pq_test.cpp
+)
+target_link_libraries(
+  pq_test
+  alaya
+  GTest::gtest_main
+)
 
 add_executable(
   hello_test
@@ -87,7 +129,7 @@ target_link_libraries(
 
 include(GoogleTest)
 gtest_discover_tests(distance_test)
+gtest_discover_tests(pq_test)
 gtest_discover_tests(hello_test)
 
 
-# add_subdirectory(tests)
