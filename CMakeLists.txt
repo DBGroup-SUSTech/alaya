@@ -48,6 +48,7 @@ add_library(alaya
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/kmeans.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/random_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/TableSchema.cpp
+        include/alaya/index/graph/nsglib/utils.h
 )
 target_link_libraries(alaya
   PUBLIC
@@ -60,7 +61,8 @@ target_include_directories(alaya
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-find_package(MKL)
+#find_package(MKL)
+find_package(MKL CONFIG REQUIRED)
 if(MKL_FOUND)
   message(STATUS "MKL found")
   add_compile_definitions(USE_MKL)
