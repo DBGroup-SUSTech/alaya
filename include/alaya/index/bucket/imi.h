@@ -22,6 +22,7 @@
 #include <map>
 #include <vector>
 
+#include "../../utils/memory.h"
 #include "alaya/index/bucket/bucket.h"
 
 using boost::lexical_cast;
@@ -41,26 +42,32 @@ namespace alaya {
 // };
 int GetCellCount(int subspace_cnt, int bucket_num);
 
-template <typename IDType, typename DataType>
-struct InvertedMultiIndex : Bucket<IDType, DataType> {
-  InvertedMultiIndex<IDType, DataType>(const int bucket_num, MetricType metric, const int data_dim,
-                                       const int subspace_cnt, const int clustering_iter)
-      : bucket_num_(bucket_num),
-        metric_type_(metric),
-        data_dim_(data_dim),
-        clustering_iter_(clustering_iter),
+template <typename DataType, typename IDType>
+struct InvertedMultiIndex : Index<DataType, IDType> {
+  InvertedMultiIndex(const int bucket_num, MetricType metric, const int vec_dim,
+                     const int subspace_cnt)
+      : Index<DataType, IDType>(vec_dim, metric),
+        bucket_num_(bucket_num),
         subspace_cnt_(subspace_cnt) {
     int cell_cnt = GetCellCount(subspace_cnt, bucket_num);
     id_buckets_.resize(cell_cnt);
-    buckets_.resize(cell_cnt);
-    cell_data_cnt_.resize(cell_cnt);
-    assert(data_dim_ % subspace_cnt_ == 0 || !"please change the subspace number.");
+    data_buckets_.resize(cell_cnt);
+    cell_data_cnt_ = (int*)Alloc64B(sizeof(int) * cell_cnt);
+    assert(this->vec_dim_ % subspace_cnt_ == 0 || !"please change the subspace number.");
   }
-  using Centroids = std::vector<DataType>;
 
-  int data_dim_;                    // data dimensions
-  IDType data_num_;                 // data numbers
-  MetricType metric_type_;          // metric type
+  ~InvertedMultiIndex() {
+    // for (int i = 0; i < id_buckets_.size(); ++i) {
+    //   id_buckets_[i].clear();
+    // }
+    // id_buckets_.clear();
+    // for (int i = 0; i < data_buckets_.size(); ++i) {
+    //   data_buckets_[i].clear();
+    // }
+    // data_buckets_.clear();
+    delete[] cell_data_cnt_;
+  }
+
   const DataType* data_ = nullptr;  // data ptr
   int subspace_cnt_;                // subspace count, usually set to 2
   unsigned int clustering_iter_;    // max kmeans iterations
@@ -70,8 +77,8 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
 
   // store data ids in each cell, equals to a two-dimension-version of multiindex
   // since it has two dimensions, there is no need to store offsets in cell_edges
-  std::vector<std::vector<IDType>> id_buckets_;
-  std::vector<std::vector<DataType>> buckets_;  // store data points in each cell
+  std::vector<IDType*> id_buckets_;
+  std::vector<DataType*> data_buckets_;  // store data points in each cell
 
   // std::vector<int> subspace_dim_; // vector to store each subspace dimension
 
@@ -87,28 +94,26 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
          |- float float float float .....   centroid2   共有bucket_num_个
   --------------------------------------
    */
-  std::vector<std::vector<Centroids>> subspace_ivf_centroids_;
+  std::vector<DataType*> subspace_ivf_centroids_;
 
   // equals to transposed_coarse_quantizations, stores nearest subspace centroid ids for each point
   /* structure is:
   --------------------------------------
-  shard1 |- int int int int int .....   共有data_num_个
+  shard1 |- int int int int int .....   共有vec_num_个
         -------------------------------
-  shard2 |- int int int int int .....   共有data_num_个
+  shard2 |- int int int int int .....   共有vec_num_个
   --------------------------------------
   */
-  std::vector<std::vector<int>> nearest_subspace_centroid_ids_;
+  std::vector<int*> nearest_subspace_centroid_ids_;
   // equals to point_in_cells_count_, stores data counts in each cell
   // since dimensions of each subspace are predefined by bucket_num_ and subspace_cnt_,
   // no need to use std::vector<int> dimensions in class Multitable
-  std::vector<int> cell_data_cnt_;
+  int* cell_data_cnt_;
 
-  boost::mutex cell_counts_mutex_;
-
-  void BuildIndex(IDType data_num, const DataType* kData) override {
-    data_num_ = data_num;
+  void BuildIndex(IDType vec_num, const DataType* kData) override {
+    this->vec_num_ = vec_num;
     data_ = kData;
-    int subspace_dim = data_dim_ / subspace_cnt_;
+    int subspace_dim = this->vec_dim_ / subspace_cnt_;
 
     GetNearestCentroidIdList(subspace_dim);
 
@@ -124,7 +129,7 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
   void FillIndex() {
     std::cout << "indexing started..." << std::endl;
     std::vector<int> cell_data_written_cnt(cell_data_cnt_.size());
-    int thread_data_count = data_num_ / THREADS_COUNT;
+    int thread_data_count = this->vec_num_ / THREADS_COUNT;
 
     //     omp_init_lock(&lock);
     // #pragma omp parallel for
@@ -146,8 +151,8 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
                           std::vector<int>& cell_data_written_cnt) {
     std::vector<int> nearest_ids(subspace_cnt_);
     IDType pid = 0;
-    for (int data_number = 0; data_number < subset_size; ++data_number) {
-      pid = start_pid + data_number;
+    for (int vec_number = 0; vec_number < subset_size; ++vec_number) {
+      pid = start_pid + vec_number;
       for (int i = 0; i < subspace_cnt_; ++i) {
         nearest_ids[i] = nearest_subspace_centroid_ids_[i][pid];
       }
@@ -162,14 +167,14 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
     }
     // copy data
     // #pragma omp parallel for
-    for (int i = 0; i < buckets_.size(); ++i) {
-      buckets_[i].resize(cell_data_written_cnt[i] * data_dim_);
+    for (int i = 0; i < data_buckets_.size(); ++i) {
+      buckets_[i].resize(cell_data_written_cnt[i] * vec_dim_);
       DataType* single_data_ptr = buckets_[i].data();
       for (int j = 0; j < id_buckets_[i].size(); ++j) {
-        const DataType* v_begin = data_ + id_buckets_[i][j] * data_dim_;
-        const DataType* v_end = v_begin + data_dim_;
+        const DataType* v_begin = data_ + id_buckets_[i][j] * vec_dim_;
+        const DataType* v_end = v_begin + vec_dim_;
         std::copy(v_begin, v_end, single_data_ptr);
-        single_data_ptr += data_dim_;
+        single_data_ptr += vec_dim_;
       }
     }
     // omp_destroy_lock(&lock);
@@ -183,12 +188,12 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
    */
   void GetNearestCentroidIdList(int subspace_dim) {
     // 得到每个子空间的中心点，结构和 coarse_vocabs 相同
-    kmeans<DataType, IDType>(data_, data_num_, data_dim_, subspace_dim, subspace_ivf_centroids_,
+    kmeans<DataType, IDType>(data_, vec_num_, vec_dim_, subspace_dim, subspace_ivf_centroids_,
                              bucket_num_, false, clustering_iter_);
 
     nearest_subspace_centroid_ids_.resize(subspace_cnt_);
     for (int i = 0; i < subspace_cnt_; ++i) {
-      nearest_subspace_centroid_ids_[i].resize(data_num_);
+      nearest_subspace_centroid_ids_[i].resize(vec_num_);
     }
 
     std::cout << "Memory for coarse quantizations allocated" << std::endl;
@@ -197,7 +202,7 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
 
     // #pragma omp parallel for
     for (int thread_id = 0; thread_id < THREADS_COUNT; ++thread_id) {
-      int thread_data_count = data_num_ / THREADS_COUNT;
+      int thread_data_count = vec_num_ / THREADS_COUNT;
       IDType start_pid = thread_data_count * thread_id;
       GetNearestCentroidIdListForSubset(data_, start_pid, thread_data_count);
     }
@@ -211,7 +216,7 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
 
     /*
     boost::thread_group index_threads;
-    int thread_data_count = data_num_ / THREADS_COUNT;
+    int thread_data_count = vec_num_ / THREADS_COUNT;
     for (int thread_id = 0; thread_id < THREADS_COUNT; ++thread_id) {
       IDType start_pid = thread_data_count * thread_id;
       index_threads.create_thread(
@@ -229,19 +234,18 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
     // nearest subspace centroid ids for each point
     std::vector<int> nearest_ids(subspace_cnt_);  // coarse_quantization
     // for each points in the subset
-    for (int data_number = 0; data_number < subset_size; ++data_number) {
-      if (data_number % 10000 == 0)
-        std::cout << "Getting coarse quantization, point # " << start_pid + data_number
-                  << std::endl;
-      // std::vector<DataType> current_data(data_dim_);
+    for (int vec_number = 0; vec_number < subset_size; ++vec_number) {
+      if (vec_number % 10000 == 0)
+        std::cout << "Getting coarse quantization, point # " << start_pid + vec_number << std::endl;
+      // std::vector<DataType> current_data(vec_dim_);
 
       // get the beginning ptr of each point
-      const DataType* v_begin = data_ + (data_number + start_pid) * data_dim_;
-      const DataType* v_end = v_begin + data_dim_;
+      const DataType* v_begin = data_ + (vec_number + start_pid) * vec_dim_;
+      const DataType* v_end = v_begin + vec_dim_;
       // std::copy(v_begin, v_end, current_data.data());
 
       // get dimensions of each subspace
-      int subspace_dim = data_dim_ / subspace_cnt_;
+      int subspace_dim = vec_dim_ / subspace_cnt_;
 
       // for each subspace
       for (int subspace_index = 0; subspace_index < subspace_cnt_; ++subspace_index) {
@@ -252,13 +256,13 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
         // get the subvector beginning addr of this point in this subspace
         const DataType* subv_begin = v_begin + begin_dim;
         const DataType* subv_end = subv_begin + subspace_dim;
-        // actually begin addr = data_ + data_number * data_dim_ + subspace_index* subspace_dim
+        // actually begin addr = data_ + vec_number * vec_dim_ + subspace_index* subspace_dim
         std::vector<DataType> current_subdata(subspace_dim);
         std::copy(subv_begin, subv_end, current_subdata.data());
 
         int nearest = GetNearestCentroidId(current_subdata, subspace_ivf_centroids_[subspace_index],
                                            subspace_dim);
-        nearest_subspace_centroid_ids_[subspace_index][start_pid + data_number] = nearest;
+        nearest_subspace_centroid_ids_[subspace_index][start_pid + vec_number] = nearest;
         nearest_ids[subspace_index] = nearest;
       }
       int global_index = GetGlobalCellIndex(nearest_ids);
@@ -283,7 +287,7 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
     DataType min_dist =
         L2Sqr<DataType>(kCurrentData.data(), kSubspaceIvfCentroid[0].data(), subspace_dim);
     // printf("min_dist = %f\n", min_dist);
-    // DataType dist = L2Sqr<DataType>(data_ + i * data_dim_, centroids_[j].data(), data_dim_);
+    // DataType dist = L2Sqr<DataType>(data_ + i * vec_dim_, centroids_[j].data(), vec_dim_);
     for (IDType pid = 1; pid < kSubspaceIvfCentroid.size(); ++pid) {
       DataType current_dist = 0;
       // current_dist = distFunc(kCurrentData.data(), kSubspaceIvfCentroid[pid].data(),
@@ -310,7 +314,7 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
 
   /**
    * @brief Index file structure
-   * metadata:                 | data_num_ | data_dim_ | subspace_cnt_ | bucket_num | cell_num |
+   * metadata:                 | vec_num_ | vec_dim_ | subspace_cnt_ | bucket_num | cell_num |
    * centroids in subspace0:   | centroid0 in subspace0 | centroid1 in subspace0 | ... |
    * centroids in subspace1:   | centroid0 in subspace1 | centroid1 in subspace1 | ... |
    * buckets:
@@ -331,14 +335,14 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
         "index...\n",
         static_cast<size_t>(bucket_num_), static_cast<size_t>(cell_cnt));
 
-    output.write((char*)&data_num_, sizeof(IDType));
-    output.write((char*)&data_dim_, sizeof(int));
+    output.write((char*)&vec_num_, sizeof(IDType));
+    output.write((char*)&vec_dim_, sizeof(int));
     output.write((char*)&subspace_cnt_, sizeof(int));
     // write bucket_num_
     output.write((char*)&bucket_num_, sizeof(int));
 
     output.write((char*)&cell_cnt, sizeof(int));
-    int subspace_dim = data_dim_ / subspace_cnt_;
+    int subspace_dim = vec_dim_ / subspace_cnt_;
     // write all centroids
     for (int i = 0; i < subspace_cnt_; ++i) {
       for (int j = 0; j < bucket_num_; ++j) {
@@ -351,7 +355,7 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
       int each_bucket_size = 0;
       output.write((char*)&each_bucket_size, sizeof(uint32_t));
       output.write((char*)id_buckets_[i].data(), sizeof(IDType) * each_bucket_size);
-      output.write((char*)buckets_[i].data(), sizeof(DataType) * each_bucket_size * data_dim_);
+      output.write((char*)buckets_[i].data(), sizeof(DataType) * each_bucket_size * vec_dim_);
     }
     printf("[Report] - saving index complete!\n");
 
@@ -364,17 +368,17 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
       throw std::runtime_error("Cannot open file");
     }
     int cell_cnt = 0;
-    input.read((char*)&data_num_, sizeof(IDType));
-    input.read((char*)&data_dim_, sizeof(int));
+    input.read((char*)&vec_num_, sizeof(IDType));
+    input.read((char*)&vec_dim_, sizeof(int));
     input.read((char*)&subspace_cnt_, sizeof(int));
     input.read((char*)&bucket_num_, sizeof(int));
     input.read((char*)&cell_cnt, sizeof(int));
     assert(cell_cnt == GetCellCount(subspace_cnt_, bucket_num_) || !"cell count mismatch");
-    int subspace_dim = data_dim_ / subspace_cnt_;
+    int subspace_dim = vec_dim_ / subspace_cnt_;
     printf(
-        "[Report] - data_num = %zu, data_dim = %zu, subspace_cnt = %zu, bucket_num = %zu, cell_cnt "
+        "[Report] - vec_num = %zu, vec_dim = %zu, subspace_cnt = %zu, bucket_num = %zu, cell_cnt "
         "= %zu, starting to read index...\n",
-        static_cast<size_t>(data_num_), static_cast<size_t>(data_dim_),
+        static_cast<size_t>(vec_num_), static_cast<size_t>(vec_dim_),
         static_cast<size_t>(subspace_cnt_), static_cast<size_t>(cell_cnt),
         static_cast<size_t>(bucket_num_));
 
@@ -396,8 +400,8 @@ struct InvertedMultiIndex : Bucket<IDType, DataType> {
       input.read((char*)&each_bucket_size, sizeof(uint32_t));
       id_buckets_[i].resize(each_bucket_size);
       input.read((char*)id_buckets_[i].data(), sizeof(IDType) * each_bucket_size);
-      buckets_[i].resize(each_bucket_size * data_dim_);
-      input.read((char*)buckets_[i].data(), sizeof(DataType) * each_bucket_size * data_dim_);
+      buckets_[i].resize(each_bucket_size * vec_dim_);
+      input.read((char*)buckets_[i].data(), sizeof(DataType) * each_bucket_size * vec_dim_);
     }
 
     printf("[Report] - reading index complete!\n");

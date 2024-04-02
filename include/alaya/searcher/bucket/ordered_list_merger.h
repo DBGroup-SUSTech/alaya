@@ -56,7 +56,7 @@ class OrderedListMerger {
       // sum 是dist的sum
       sum += lists_ptr->at(list_index)[merged_item_indices[list_index]].first;
     }
-    // float  和  vector<int> 作为一个pair插入到heap中
+    // 把距离和  和  两个对应的坐标插入到heap中
     heap_.insert(std::make_pair(sum, merged_item_indices));
   }
 
@@ -69,6 +69,7 @@ class OrderedListMerger {
       first_item_indices[list_index] = 0;
     }
     // todo 这里需要给traversed_ 初始化
+    // 先插入一个0，0
     InsertMergedItemIndicesInHeap(first_item_indices);
   }
   /**
@@ -92,16 +93,21 @@ class OrderedListMerger {
     }
     InsertMergedItemIndicesInHeap(merged_item_indices);
   }
+  // next_merged_item_indices 下一个要merge的item的坐标
   inline bool GetNextMergedItemIndices(MergedItemIndices* next_merged_item_indices) {
     if (heap_.empty()) {
       return false;
     }
+    // 从heap的第一个开始，先取出坐标，放到 next_merged_item_indices 中
+    // 然后把这个坐标加入到traversed_中
     // std::multimap<float, MergedItemIndices> heap_;
     *next_merged_item_indices = heap_.begin()->second;
     traversed_.insert(*next_merged_item_indices);  // 加入traversed 中。
     //   yielded_items_indices_.SetValue(1, *next_merged_item_indices);
     // 几个subspace 就往几个方向扩展
     for (int list_index = 0; list_index < lists_ptr->size(); ++list_index) {
+      // 然后向各个方向扩展  更新优先队列
+      // 先把第一个维度上的坐标+1
       next_merged_item_indices->at(list_index) += 1;
       UpdatePrioirityQueue(*next_merged_item_indices);
       next_merged_item_indices->at(list_index) -= 1;

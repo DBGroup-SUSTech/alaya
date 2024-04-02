@@ -16,14 +16,20 @@ typedef float Distance;
 typedef std::vector<int> MergedItemIndices;
 typedef std::vector<std::pair<Distance, ClusterId>> NearestSubspaceCentroids;
 typedef float Coord;
-typedef std::vector<Coord> Point;
 typedef std::vector<std::pair<Distance, ClusterId>> NearestSubspaceCentroids;
 typedef std::vector<Coord> Centroids;
 
 namespace alaya {
-template <typename IDType, typename DataType>
+template <typename DataType, typename IDType,
+          typename IndexType = InvertedMultiIndex<DataType, IDType>>
 struct IMISearcher {
-  typedef InvertedMultiIndex<IDType, DataType> IndexType;
+  using ClusterId = int;
+  using Distance = DataType;
+  using MergedItemIndices = std::vector<int>;
+  using NearestSubspaceCentroids = std::vector<std::pair<Distance, ClusterId>>;
+  using Coord = DataType;
+  using Centroids = std::vector<Coord>;
+
   std::unique_ptr<IndexType> index_ = nullptr;
   int64_t query_dim_;
   const DataType* query_;
@@ -72,6 +78,7 @@ struct IMISearcher {
     subspaces_short_lists->resize(index_->subspace_cnt_);  // init()
     int subspace_dimensions = query_dim_ / index_->subspace_cnt_;
     Distance distance = 0;
+    // 对于每个子空间
     for (int subspace_indexer = 0; subspace_indexer < index_->subspace_cnt_; subspace_indexer++) {
       int start_dim = subspace_indexer * subspace_dimensions;
       int final_dim = query_dim_;
@@ -94,6 +101,9 @@ struct IMISearcher {
             std::make_pair(distance, cluster_index);
       }
       // sort()
+
+      // 只排序 subspaces_short_lists->at(subspace_indexer) 的前 subspace_centroids_cnt 个元素
+      // 也就是搜索的数量
       std::nth_element(subspaces_short_lists->at(subspace_indexer).begin(),
                        subspaces_short_lists->at(subspace_indexer).begin() + subspace_centroids_cnt,
                        subspaces_short_lists->at(subspace_indexer).end());
@@ -105,24 +115,27 @@ struct IMISearcher {
 
   // 这里是从merger_ 中获取最小距离的cell，类似于bfs过程。
   bool TraverseNextMultiIndexCell() {
-    // std::vector<int> cell_coordinates;  保存着每个cell中的cell id
+    // std::vector<int> cell_coordinates;  是这个cell的坐标，通常大小为2
     MergedItemIndices cell_inner_indices;
     printf("print heap_: \n");
     merger_.print_heap();
+    // merger.lists_ptr 就是查询向量在每个维度下按照距离排序过后的中心点id 和 距离  first 是距离
+    // second 是id
     if (!merger_.GetNextMergedItemIndices(&cell_inner_indices)) {
       printf("kong\n");
       return false;
     }
+    // 应该也是一个二维的东西
     std::vector<int> cell_coordinates(cell_inner_indices.size());
+    // 每个子空间 去 get cell id
     for (int list_index = 0; list_index < merger_.lists_ptr->size(); ++list_index) {
       cell_coordinates[list_index] =
           merger_.lists_ptr->at(list_index)[cell_inner_indices[list_index]].second;
     }  // 定位坐标的，cluster的坐标，
     printf("get global index\n");
+    // 拿到global index  计算得到结果
     int global_index = index_->GetGlobalCellIndex(cell_coordinates);
 
-    // printf("index_->id_buckets_.size()  :%lu \n", index_->id_buckets_.size());
-    // printf("index_->buckets_.size()  :%lu \n", index_->buckets_.size());
     printf("global_index: %d\n", global_index);
 
     std::vector<IDType> id_pool = index_->id_buckets_.at(global_index);
