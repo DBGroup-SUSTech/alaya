@@ -10,7 +10,7 @@
 namespace alaya {
 
 template <typename IDType, typename DataType>
-struct Graph : Index<IDType, DataType> {
+struct Graph : Index<DataType, IDType> {
   int edge_num_;
 
   IDType *linklist_ = nullptr;
@@ -20,10 +20,12 @@ struct Graph : Index<IDType, DataType> {
   std::vector<IDType> eps_;
 
   Graph() = default;
+  Graph(int dim, std::string_view metric, int edge_num)
+      : Index<DataType, IDType>(dim, metric), edge_num_(edge_num) {}
 
-  const int *edges(int u) const { return linklist_ + edge_num_ * u; }
+  const IDType *edges(int u) const { return linklist_ + edge_num_ * u; }
 
-  int *edges(int u) { return linklist_ + edge_num_ * u; }
+  IDType *edges(int u) { return linklist_ + edge_num_ * u; }
 
   IDType at(int i, int j) const { return linklist_[i * edge_num_ + j]; }
 

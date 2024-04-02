@@ -12,6 +12,7 @@
 #include <memory>
 #include <sys/mman.h>
 #include <cstring>
+#include <iostream>
 
 
 namespace alaya {
@@ -22,10 +23,8 @@ struct HNSW : public Graph<IDType, DataType> {
   std::unique_ptr<hnswlib::HierarchicalNSW<float>> hnsw = nullptr;
   std::unique_ptr<hnswlib::SpaceInterface<float>> space = nullptr;
 
-  HNSW(int dim, IDType num, std::string_view metric, int R = 32, int L = 200)
-      : Graph<IDType, DataType>(dim, num, metric), M(R / 2), efConstruction(L) {
-    this->edge_num_ = 2 * M;
-
+  HNSW(int dim, std::string_view metric, int R = 32, int L = 200)
+      : Graph<IDType, DataType>(dim, metric, R), M(R / 2), efConstruction(L) {
     if (this->metric_type_ == MetricType::L2) {
       space = std::make_unique<hnswlib::L2Space>(dim);
     } else if (this->metric_type_ == MetricType::IP) {
@@ -37,34 +36,30 @@ struct HNSW : public Graph<IDType, DataType> {
   }
 
   void BuildIndex(IDType vec_num, const DataType* kVecData) override {
-    // #12 todo: 这确实是之前设计时的疏忽,Index 基类的构造函数中不应该有 vec_num参数, vector number 在 BuildIndex 时确定
     this->vec_num_ = vec_num;
-    // todo: 封装内存对齐分配函数
     size_t len = this->vec_num_ * this->edge_num_ * sizeof(IDType);
-    this->linklist_ = Alloc2M(len);
+    this->linklist_ = (IDType*)Alloc2M(len);
 
-    // 目前只使用float类型数据来建图
-    auto get_fvec_ptr = [this, kVecData](int cur)->float * {
-      float* buf = new float[this->vec_dim_]{};
-      const DataType* beg_addr = kVecData + cur * this->vec_dim_;
-      for (int i = 0; i < this->vec_dim_; ++i) {
-        buf[i] = static_cast<float>(beg_addr[i]);
-      }
-    };
+    float* data = nullptr;
+    std::unique_ptr<float[]> data_buf = nullptr;
+    if constexpr (std::is_same_v<DataType, float>) {
+      data = const_cast<DataType* >(kVecData);
+    } else {
+      data_buf = std::make_unique<float[]>(this->vec_num_ * this->vec_dim_);
+      data = data_buf.get();
+      std::transform(kVecData, kVecData + this->vec_num_ * this->vec_dim_, data,
+                     [](const DataType& val) { return static_cast<float>(val); });
+    }
 
     int nb = this->vec_num_;
     hnsw = std::make_unique<hnswlib::HierarchicalNSW<float>>(space.get(), nb, M,
                                                              efConstruction);
     std::atomic<int> cnt{0};
     auto st = std::chrono::high_resolution_clock::now();
-    auto buf_ptr = get_fvec_ptr(0);
-    hnsw->addPoint(buf_ptr, 0);
-    delete buf_ptr;
+    hnsw->addPoint(data, 0);
 #pragma omp parallel for schedule(dynamic)
     for (int i = 1; i < nb; ++i) {
-      auto ptr = get_fvec_ptr(i);
-      hnsw->addPoint(ptr, i);
-      delete ptr;
+      hnsw->addPoint(data + i * this->vec_dim_, i);
       int cur = cnt += 1;
       if (cur % 10000 == 0) {
         printf("HNSW building progress: [%d/%d]\n", cur, nb);
@@ -100,6 +95,15 @@ struct HNSW : public Graph<IDType, DataType> {
       }
     }
 //    final_graph.initializer = std::move(initializer);
+  }
+
+  // todo: to be defined
+  void Save(const char* kFilePath) const override {
+
+  }
+
+  void Load(const char* kFilePath) override {
+
   }
 
 

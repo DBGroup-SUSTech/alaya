@@ -13,17 +13,17 @@ struct UpperLayer {
   UpperLayer() = default;
   UpperLayer(int vec_num, int M):levels_(vec_num), list_(vec_num), nb(vec_num), M(M) {}
 
-  int at(int level, int u, int i) const {
+  IDType at(int level, int u, int i) const {
     return list_[u][(level - 1) * M + i];
   }
 
-  int &at(int level, int u, int i) { return list_[u][(level - 1) * M + i]; }
+  IDType &at(int level, int u, int i) { return list_[u][(level - 1) * M + i]; }
 
-  const int *edges(int level, int u) const {
+  const IDType *edges(int level, int u) const {
     return list_[u].data() + (level - 1) * M;
   }
 
-  int *edges(int level, int u) { return list_[u].data() + (level - 1) * M; }
+  IDType *edges(int level, int u) { return list_[u].data() + (level - 1) * M; }
 };
 
 } // namespace alaya

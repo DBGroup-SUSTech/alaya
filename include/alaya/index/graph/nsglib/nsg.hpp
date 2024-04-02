@@ -62,7 +62,7 @@ struct NSG : public Builder {
       link(knng, tmp_graph);
       final_graph.init(n, R);
       std::fill_n(final_graph.data, n * R, EMPTY_ID);
-      final_graph.eps = {ep};
+      final_graph.eps = {this->ep};
 #pragma omp parallel for
       for (int i = 0; i < n; i++) {
         int cnt = 0;

@@ -37,6 +37,7 @@ struct MetricMap {
     }
     __builtin_unreachable();
   }
+
 };
 
 inline constexpr MetricMap kMetricMap{};

@@ -49,6 +49,7 @@ add_library(alaya
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/random_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/TableSchema.cpp
         include/alaya/index/graph/nsglib/utils.h
+        include/alaya/index/quantizer/normal_quantizer.h
 )
 target_link_libraries(alaya
   PUBLIC
@@ -85,6 +86,7 @@ enable_testing()
 add_executable(
   distance_test
   tests/distance_test.cpp
+        tests/graph_test.cpp
 )
 target_link_libraries(
   distance_test
@@ -105,6 +107,7 @@ target_link_libraries(
 add_executable(
   hello_test
   tests/hello_test.cpp
+        t_main.cpp
 )
 target_link_libraries(
   hello_test
