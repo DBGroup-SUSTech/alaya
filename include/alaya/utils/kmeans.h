@@ -4,9 +4,47 @@
 
 #include <algorithm>
 #include <iostream>
+#include <limits>
 #include <vector>
 
+#include "alaya/utils/distance.h"
+#include "metric_type.h"
+
 namespace alaya {
+
+template <typename DataType, typename IDType>
+std::vector<std::vector<IDType>> Assign(const DataType* kVecData, const IDType kVecNum,
+                                        const int kVecDim, const DataType* kCentroid,
+                                        const int kCentroidNum, MetricType metric) {
+  DistFunc<DataType, DataType, DataType> dist_func;
+  if (metric == MetricType::IP) {
+    dist_func = GetDistFunc<DataType, false>(MetricType::IP);
+  } else {
+    dist_func = GetDistFunc<DataType, false>(MetricType::L2);
+  }
+  std::vector<std::vector<IDType>> ids(kCentroidNum);
+  std::vector<IDType> cid4data(kVecNum);
+#pragma parallel for
+  for (auto vid = 0; vid < kVecNum; ++vid) {
+    float min_dist = std::numeric_limits<float>::max();
+    for (auto cid = 0; cid < kCentroidNum; ++cid) {
+      float dist = dist_func(kVecData + vid * kVecDim, kCentroid + cid * kVecDim, kVecDim);
+      if (dist < min_dist) {
+        cid4data[vid] = cid;
+        min_dist = dist;
+      }
+    }
+  }
+
+  for (auto vid = 0; vid < kVecNum; ++vid) {
+    ids[cid4data[vid]].emplace_back(vid);
+  }
+
+  return ids;
+}
+
+std::vector<float> kmeans(const float* kData, const std::size_t kDataNum,
+                          const std::size_t kDataDim, unsigned cluster_num, MetricType metric);
 
 void kmeans(const float* kData, const std::size_t kDataNum, const std::size_t kDataDim,
             std::vector<std::vector<float>>& centroids, unsigned cluster_num,

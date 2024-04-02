@@ -218,18 +218,18 @@ DataType GetSqrNorm(const DataType* kX, int dim) {
 template <typename DataType>
 DataType InnerProduct(const DataType* kX, const DataType* kY, int dim) {
   if constexpr (std::is_same<DataType, float>::value) {
-    return InnerProductFloat(kX, kY, dim);
+    return -InnerProductFloat(kX, kY, dim);
   } else {
-    return NaiveIp(kX, kY, dim);
+    return -NaiveIp(kX, kY, dim);
   }
 }
 
 template <typename DataType>
 DataType AlignInnerProduct(const DataType* kX, const DataType* kY, int dim) {
   if constexpr (std::is_same<DataType, float>::value) {
-    return AlignInnerProductFloat(kX, kY, dim);
+    return -AlignInnerProductFloat(kX, kY, dim);
   } else {
-    return NaiveIp(kX, kY, dim);
+    return -NaiveIp(kX, kY, dim);
   }
 }
 
