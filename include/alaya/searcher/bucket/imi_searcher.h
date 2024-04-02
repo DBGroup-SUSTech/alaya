@@ -1,6 +1,7 @@
 #pragma once
 
 #include <alaya/index/bucket/imi.h>
+#include <alaya/searcher/searcher.h>
 #include <alaya/utils/pool.h>
 
 #include <cstdio>
@@ -11,18 +12,11 @@
 #include <vector>
 
 #include "ordered_list_merger.h"
-typedef int ClusterId;
-typedef float Distance;
-typedef std::vector<int> MergedItemIndices;
-typedef std::vector<std::pair<Distance, ClusterId>> NearestSubspaceCentroids;
-typedef float Coord;
-typedef std::vector<std::pair<Distance, ClusterId>> NearestSubspaceCentroids;
-typedef std::vector<Coord> Centroids;
 
 namespace alaya {
 template <typename DataType, typename IDType,
           typename IndexType = InvertedMultiIndex<DataType, IDType>>
-struct IMISearcher {
+struct IMISearcher : Searcher<IndexType, DataType> {
   using ClusterId = int;
   using Distance = DataType;
   using MergedItemIndices = std::vector<int>;
@@ -30,15 +24,17 @@ struct IMISearcher {
   using Coord = DataType;
   using Centroids = std::vector<Coord>;
 
-  std::unique_ptr<IndexType> index_ = nullptr;
-  int64_t query_dim_;
+  DistFunc<DataType, DataType, DataType> dist_func_;
+  std::vector<IDType*> order_;
+  std::vector<DataType*> centroids_dist_;
+
   const DataType* query_;
-  int64_t k_;
-  DataType* distances_ = nullptr;
   ResultPool<IDType, DataType>* res_;
   // int64_t query_num_;
   mutable OrderedListMerger merger_;
-  IMISearcher() = default;
+  IMISearcher(const IndexType* index)
+      : Searcher<IndexType, DataType>(index, nullptr),
+        dist_func_(GetDistFunc<DataType, false>(this->index_->metric_type_)) {}
   ~IMISearcher() {
     delete res_;
     printf("IMISearcher destructor\n");
@@ -158,9 +154,10 @@ struct IMISearcher {
   }
   void GetNearestNeighbours(const DataType* query, int k) {
     // printf("begin GetNearestNeighbours\n");
-    assert(k > 0);
-    std::vector<NearestSubspaceCentroids> subspaces_short_lists;
-    assert(index_->subspace_cnt_ > 0);
+    assert(this->index_->subspace_cnt_ > 0);
+    std::vector<IDType*> order(this->index_->subspace_cnt_);
+    std::vector<DataType*> centroids_dist(this->index_->subspace_cnt_);
+
     // printf("begin GetNearestSubspacesCentroids\n");
     GetNearestSubspacesCentroids(
         &subspaces_short_lists,
@@ -190,11 +187,8 @@ struct IMISearcher {
     // printf("begin search imi\n");
     res_ = new ResultPool<IDType, DataType>(index_->data_num_, 2 * k, k);
     assert(query_dim == index_->data_dim_ && "Query dimension must be equal to data dimension.");
-    query_dim_ = query_dim;
-    query_ = query;
-    k_ = k;
     distances_ = distances;
-    GetNearestNeighbours(query_, k_);
+    GetNearestNeighbours(query, k);
   }
 };
 }  // namespace alaya

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <alaya/index/bucket/ivf.h>
+#include <alaya/index/bucket/ivf_origin.h>
 #include <alaya/searcher/searcher.h>
 #include <alaya/utils/distance.h>
 #include <alaya/utils/memory.h>
@@ -22,9 +22,8 @@ struct InvertedListSearcher : Searcher<IndexType, DataType> {
   // int64_t query_num_;
 
   explicit InvertedListSearcher(const IndexType* index)
-      : Searcher<IndexType, DataType>(index, nullptr) {
-    dist_func_ = GetDistFunc<DataType, false>(this->index_->metric_type_);
-  };
+      : Searcher<IndexType, DataType>(index, nullptr),
+        dist_func_(GetDistFunc<DataType, false>(this->index_->metric_type_)) {}
 
   ~InvertedListSearcher() { printf("InvertedListSearcher destructor\n"); };
 
