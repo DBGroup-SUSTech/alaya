@@ -12,6 +12,7 @@
 #include "../../utils/kmeans.h"
 #include "../../utils/memory.h"
 #include "../index.h"
+#include "alaya/utils/io_utils.h"
 
 namespace alaya {
 template <typename DataType = float, typename IDType = int64_t>
