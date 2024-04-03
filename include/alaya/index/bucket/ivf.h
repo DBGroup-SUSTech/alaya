@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <fstream>
 #include <limits>
 #include <vector>
 
@@ -17,33 +18,22 @@ template <typename DataType = float, typename IDType = int64_t>
 struct IVF : Index<DataType, IDType> {
   int bucket_num_;
   DistFunc<DataType, DataType, DataType> dist_func_;
-  // Save
-  std::vector<DataType*> buckets_;
-  // Save
-  std::vector<IDType*> id_buckets_;
-  // Save
-  std::vector<unsigned> buckets_size_;
-  // Save
-  DataType* centroids_;
-
-  IDType* order_;
-  DataType* centroids_dist_;
+  std::vector<DataType*> data_buckets_;  // data_buckets_
+  std::vector<IDType*> id_buckets_;      //
+  DataType* centroids_;                  // bucket_num * dim
 
   IVF() = default;
 
   IVF(int dim, MetricType metric, int bucket_num)
       : Index<DataType, IDType>(dim, kAlgin16, metric),
         bucket_num_(bucket_num),
-        dist_func_(GetDistFunc<DataType, false>(metric)) {
-    order_ = (IDType*)Alloc64B(sizeof(IDType) * bucket_num_);
-    centroids_dist_ = (DataType*)Alloc64B(sizeof(DataType) * bucket_num_);
-  }
+        dist_func_(GetDistFunc<DataType, false>(metric)) {}
 
   void BuildIndex(IDType vec_num, const DataType* kVecData) override {
     this->vec_num_ = vec_num;
-    buckets_.resize(bucket_num_);
+    data_buckets_.resize(bucket_num_);
     id_buckets_.resize(bucket_num_);
-    buckets_size_.resize(bucket_num_);
+    // buckets_size_.resize(bucket_num_);
 
     std::vector<std::vector<IDType>> ids;
     std::vector<float> centroids;
@@ -70,43 +60,94 @@ struct IVF : Index<DataType, IDType> {
     for (auto bid = 0; bid < this->bucket_num_; ++bid) {
       std::memcpy(centroids_[bid * this->align_dim_], centroids.data()[bid * this->vec_dim_],
                   this->vec_dim_);
-      buckets_[bid] = (DataType*)Alloc64B(sizeof(DataType) * ids[bid].size() * this->vec_dim_);
-      id_buckets_[bid] = (IDType*)Alloc64B(sizeof(IDType) * ids[bid].size() + 4);
-      buckets_size_[bid] = ids[bid].size();
+
       unsigned bucket_size = ids[bid].size();
+      data_buckets_[bid] = (DataType*)Alloc64B(sizeof(DataType) * bucket_size * this->vec_dim_);
+      id_buckets_[bid] = (IDType*)Alloc64B(sizeof(IDType) * bucket_size + 4);
+      // buckets_size_[bid] = ids[bid].size();
       std::memcpy(id_buckets_[bid], &bucket_size, 4);
       auto id_bucket = (IDType*)((char*)id_buckets_[bid] + 4);
       for (auto vid = 0; vid < ids[bid].size(); ++vid) {
-        std::memcpy(buckets_[bid] + vid * this->vec_dim_, kVecData + ids[bid][vid] * this->vec_dim_,
-                    this->vec_dim_ * sizeof(DataType));
+        std::memcpy(data_buckets_[bid] + vid * this->vec_dim_,
+                    kVecData + ids[bid][vid] * this->vec_dim_, this->vec_dim_ * sizeof(DataType));
         id_bucket[vid] = ids[bid][vid];
       }
     }
   }
 
-  void InitOrder(const DataType* query) {
-    auto dist_func = GetDistFunc<DataType, true>(this->metric_type_);
-    for (auto bid = 0; bid < this->bucket_num_; ++bid) {
-      centroids_dist_[bid] =
-          dist_func(query, centroids_ + bid * this->align_dim_, this->align_dim_);
-      order_[bid] = bid;
-    }
-    std::sort(order_, order_ + this->bucket_num_,
-              [this](IDType a, IDType b) { return centroids_dist_[a] < centroids_dist_[b]; });
-  }
-
   void Save(const char* kFilePath) const override {
     fmt::println("Save IVF index to file: {}", kFilePath);
+    std::ofstream out(kFilePath, std::ios::binary);
+    if (!out.is_open()) {
+      fmt::print("Failed to open file: {}", kFilePath);
+      exit(-1);
+    }
+    WriteBinary(out, this->bucket_num_);
+    out.write((char*)centroids_, sizeof(DataType) * this->bucket_num_ * this->align_dim_);
+    for (auto bid = 0; bid < this->bucket_num_; ++bid) {
+      unsigned bucket_size;
+      std::memcpy(&bucket_size, id_buckets_[bid], 4);
+      WriteBinary(out, bucket_size);
+      out.write((char*)(id_buckets_[bid] + 4), sizeof(IDType) * bucket_size);
+      out.write((char*)data_buckets_[bid], sizeof(DataType) * bucket_size * this->vec_dim_);
+    }
+    out.close();
   }
 
-  void Load(const char* kFilePath) override {}
+  void Load(const char* kFilePath) override {
+    fmt::println("Load IVF index from file: {}", kFilePath);
+    std::ifstream in(kFilePath, std::ios::binary);
+    if (!in.is_open()) {
+      fmt::print("Failed to open file: {}", kFilePath);
+      exit(-1);
+    }
+    ReadBinary(in, this->bucket_num_);
+    centroids_ = (DataType*)Alloc64B(sizeof(DataType) * this->bucket_num_ * this->align_dim_);
+    in.read((char*)centroids_, sizeof(DataType) * this->bucket_num_ * this->align_dim_);
+    data_buckets_.resize(this->bucket_num_);
+    id_buckets_.resize(this->bucket_num_);
+    for (auto bid = 0; bid < this->bucket_num_; ++bid) {
+      unsigned bucket_size;
+      ReadBinary(in, bucket_size);
+      id_buckets_[bid] = (IDType*)Alloc64B(sizeof(IDType) * bucket_size + 4);
+      data_buckets_[bid] = (DataType*)Alloc64B(sizeof(DataType) * bucket_size * this->vec_dim_);
+      std::memcpy(id_buckets_[bid], &bucket_size, 4);
+      in.read((char*)(id_buckets_[bid] + 4), sizeof(IDType) * bucket_size);
+      in.read((char*)data_buckets_[bid], sizeof(DataType) * bucket_size * this->vec_dim_);
+    }
+    in.close();
+  }
 
   ~IVF() {
     for (auto bid = 0; bid < this->bucket_num_; ++bid) {
-      std::free(buckets_[bid]);
+      std::free(data_buckets_[bid]);
       std::free(id_buckets_[bid]);
     }
   }
+
+  template <MetricType metric>
+  struct Computer {
+    constexpr static auto dist_func_ = GetDistFunc<DataType, true>(metric);
+    int* order_ = nullptr;
+    DataType* centroids_dist_ = nullptr;
+    const IVF& kIvf_;
+
+    Computer(const IVF& ivf, const DataType* kQuery) : kIvf_(ivf) {
+      order_ = (int*)Alloc64B(sizeof(int) * kIvf_.bucket_num_);
+      centroids_dist_ = (DataType*)Alloc64B(sizeof(DataType) * kIvf_.bucket_num_);
+      for (auto bid = 0; bid < kIvf_.bucket_num_; ++bid) {
+        centroids_dist_[bid] =
+            dist_func(kQuery, centroids_dist_ + bid * this->align_dim_, this->align_dim_);
+      }
+      std::sort(order_, order_ + this->bucket_num_,
+                [this](IDType a, IDType b) { return centroids_dist_[a] < centroids_dist_[b]; });
+    }
+
+    template <MetricType m>
+    auto get_computer(const DataType* kQuery) {
+      return Computer<m>(*this, kQuery);
+    }
+  };
 };
 
 }  // namespace alaya
