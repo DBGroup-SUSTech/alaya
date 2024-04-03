@@ -15,6 +15,7 @@
 #include <boost/thread/detail/thread_group.hpp>
 #include <boost/thread/thread.hpp>
 // #include <boost/thread/thread_group.hpp>
+#include <fmt/core.h>
 #include <omp.h>
 
 #include <ctime>
@@ -25,7 +26,6 @@
 #include "../../utils/kmeans.h"
 #include "../../utils/memory.h"
 #include "alaya/index/bucket/bucket.h"
-#include "fmt/core.h"
 
 using boost::lexical_cast;
 using boost::split;
@@ -42,7 +42,6 @@ namespace alaya {
 //   std::vector<Record> multiindex_;
 //   Multitable<int> cell_edges_;  ///< Table with index cell edges in array
 // };
-int GetCellCount(int subspace_cnt, int bucket_num);
 
 template <typename DataType, typename IDType>
 struct InvertedMultiIndex : Index<DataType, IDType> {
@@ -335,7 +334,7 @@ struct InvertedMultiIndex : Index<DataType, IDType> {
     }
     return nearest;
   }
-  int GetGlobalCellIndex(std::vector<int> nearest_ids) {
+  int GetGlobalCellIndex(std::vector<int> nearest_ids) const {
     int global_index = 0;
     int subtable_cap = id_buckets_.size();
     for (int i = 0; i < subspace_cnt_; ++i) {
@@ -438,14 +437,14 @@ struct InvertedMultiIndex : Index<DataType, IDType> {
 
     input.close();
   }
-};
 
-inline int GetCellCount(int subspace_cnt, int bucket_num) {
-  int cell_num = 1;
-  for (int i = 0; i < subspace_cnt; ++i) {
-    cell_num = cell_num * bucket_num;
+  int GetCellCount(int subspace_cnt, int bucket_num) {
+    int cell_num = 1;
+    for (int i = 0; i < subspace_cnt; ++i) {
+      cell_num = cell_num * bucket_num;
+    }
+    return cell_num;
   }
-  return cell_num;
-}
+};
 
 }  // namespace alaya

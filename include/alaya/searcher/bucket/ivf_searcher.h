@@ -29,7 +29,7 @@ struct InvertedListSearcher : Searcher<IndexType, DataType> {
 
   // main search function
   void Search(int64_t query_num, int64_t query_dim, const DataType* query, int64_t k,
-              DataType* distances, IDType* labels) const override {
+              DataType* distances, IDType* labels) override {
     printf("begin search\n");
     // init result pool
     ResultPool<DataType, IDType>* res =

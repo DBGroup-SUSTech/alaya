@@ -1,5 +1,6 @@
 
 #include <alaya/index/bucket/imi.h>
+#include <alaya/searcher/bucket/imi_searcher.h>
 #include <alaya/searcher/bucket/ivf_searcher.h>
 #include <gtest/gtest.h>
 
@@ -107,11 +108,11 @@ TEST(IMITest, BuildIndex) {
 
   alaya::MetricType metric = alaya::MetricType::L2;
 
-  alaya::InvertedMultiIndex<float, int64_t> imiindex_save(3, metric, data_dim, 2);
+  alaya::InvertedMultiIndex<float, int64_t> imiindex_save(10, metric, data_dim, 2);
   imiindex_save.BuildIndex(data_num, data.data());
   imiindex_save.Save("/home/dongjiang/datasets/siftsmall/imiindex_test_v2.bin");
 
-  alaya::InvertedMultiIndex<float, int64_t> imiindex(3, metric, data_dim, 2);
+  alaya::InvertedMultiIndex<float, int64_t> imiindex(10, metric, data_dim, 2);
   imiindex.Load("/home/dongjiang/datasets/siftsmall/imiindex_test_v2.bin");
   std::cout << imiindex.id_buckets_.size() << std::endl;
   std::cout << imiindex.data_buckets_.size() << std::endl;
@@ -123,10 +124,16 @@ TEST(IMITest, BuildIndex) {
                        query_num);
   printf("query_num = %d, query_dim = %d\n", query_num, query_dim);
   int k = 100;
-  alaya::ResultPool<float, int64_t> res(imiindex.vec_num_, 2 * k, k);
-  BruteForceSearch(query.data(), query_dim, k, imiindex, res);
-  printf("after BFS\n");
+  // alaya::ResultPool<float, int64_t> res(imiindex.vec_num_, 2 * k, k);
+  // BruteForceSearch(query.data(), query_dim, k, imiindex, res);
+  // printf("after BFS\n");
 
+  float* distances = new float[100];
+  int64_t* labels = new int64_t[100];
+  alaya::IMISearcher<float, int64_t> imisearcher(&imiindex);
+  imisearcher.Search(query_num, query_dim, query.data(), k, distances, labels);
+
+  std::cout << "Search done!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
   std::ifstream gt_reader("/home/dongjiang/datasets/siftsmall/siftsmall_groundtruth.ivecs",
                           std::ios::binary);
   if (!gt_reader.is_open()) {
@@ -149,7 +156,7 @@ TEST(IMITest, BuildIndex) {
   int count = 0;
   for (int i = 0; i < k; ++i) {
     for (int j = 0; j < k; ++j) {
-      if (gt[i] == res.result_.pool_[j].id_) {
+      if (gt[i] == imisearcher.res_->result_.pool_[j].id_) {
         count++;
         break;
       }
@@ -159,4 +166,7 @@ TEST(IMITest, BuildIndex) {
             << std::endl;
   std::cout << "count is ";
   std::cout << count << std::endl;
+
+  delete[] distances;
+  delete[] labels;
 }

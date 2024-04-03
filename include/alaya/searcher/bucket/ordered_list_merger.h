@@ -17,7 +17,7 @@ struct MergedItemIndicesHash {
     return seed;
   }
 };
-
+template <typename DataType, typename IDType>
 class OrderedListMerger {
  public:
   OrderedListMerger() {}
@@ -31,7 +31,9 @@ class OrderedListMerger {
   /**
    * Pointer to input lists
    */
-  const std::vector<std::vector<std::pair<float, int> > >* lists_ptr;
+  const std::vector<int*>* order_ptr;
+  const std::vector<DataType*>* centroids_dist_ptr;
+  int bucket_num_;
   // std::vector<int>, MergedItemIndicesHash 自定义哈希函数，用于计算 MergedItemIndices 的哈希值
   // 应该用于判断是否已经遍历过这个cell
   std::unordered_set<MergedItemIndices, MergedItemIndicesHash> traversed_;
@@ -39,7 +41,8 @@ class OrderedListMerger {
   void print_heap() {
     for (auto it = heap_.begin(); it != heap_.end(); ++it) {
       // 打印第二个元素（vector<int>）
-      std::cout << "Second element of pair: ";
+      std::cout << "first and second element of pair: ";
+      std::cout << it->first << " ";
       for (int element : it->second) {
         std::cout << element << " ";
       }
@@ -52,20 +55,28 @@ class OrderedListMerger {
    */
   void InsertMergedItemIndicesInHeap(const MergedItemIndices& merged_item_indices) {
     float sum = 0;
-    for (int list_index = 0; list_index < lists_ptr->size(); ++list_index) {
+    for (int list_index = 0; list_index < order_ptr->size(); ++list_index) {
       // sum 是dist的sum
-      sum += lists_ptr->at(list_index)[merged_item_indices[list_index]].first;
+      sum += centroids_dist_ptr->at(list_index)[merged_item_indices[list_index]];
     }
     // 把距离和  和  两个对应的坐标插入到heap中
+    std::cout << "dist " << sum << "  ";
+    for (int i = 0; i < merged_item_indices.size(); ++i) {
+      std::cout << "pair " << merged_item_indices[i] << " ";
+    }
     heap_.insert(std::make_pair(sum, merged_item_indices));
   }
 
-  void setLists(const std::vector<std::vector<std::pair<float, int> > >& lists) {
-    lists_ptr = &lists;
+  void setLists(const std::vector<int*>& order, const std::vector<DataType*>& centroids_dist,
+                int bucket_num) {
+    order_ptr = &order;
+    centroids_dist_ptr = &centroids_dist;
+
+    bucket_num_ = bucket_num;
     heap_.clear();
-    // std::vector<int> MergedItemIndices;
-    MergedItemIndices first_item_indices(lists.size());
-    for (int list_index = 0; list_index < lists.size(); ++list_index) {
+    // std::vector<int> MergedItemIndices;  其实就是一个二维数组而已,也就是两个维度下的索引
+    std::vector<int> first_item_indices(order.size());
+    for (int list_index = 0; list_index < order.size(); ++list_index) {
       first_item_indices[list_index] = 0;
     }
     // todo 这里需要给traversed_ 初始化
@@ -77,8 +88,9 @@ class OrderedListMerger {
    * @param merged_item_indices new indices we should try to push in priority queue
    */
   void UpdatePrioirityQueue(MergedItemIndices& merged_item_indices) {
-    for (int list_index = 0; list_index < lists_ptr->size(); ++list_index) {
-      if (merged_item_indices[list_index] >= lists_ptr->at(list_index).size()) {
+    for (int list_index = 0; list_index < order_ptr->size(); ++list_index) {
+      // TODO 这个地方 需要拿到bucket_num_
+      if (merged_item_indices[list_index] >= bucket_num_) {
         return;
       }
       int current_index = merged_item_indices[list_index];
@@ -105,12 +117,16 @@ class OrderedListMerger {
     traversed_.insert(*next_merged_item_indices);  // 加入traversed 中。
     //   yielded_items_indices_.SetValue(1, *next_merged_item_indices);
     // 几个subspace 就往几个方向扩展
-    for (int list_index = 0; list_index < lists_ptr->size(); ++list_index) {
+    for (int list_index = 0; list_index < order_ptr->size(); ++list_index) {
       // 然后向各个方向扩展  更新优先队列
       // 先把第一个维度上的坐标+1
       next_merged_item_indices->at(list_index) += 1;
       UpdatePrioirityQueue(*next_merged_item_indices);
       next_merged_item_indices->at(list_index) -= 1;
+    }
+    for (int i = 0; i < (*next_merged_item_indices).size(); ++i) {
+      std::cout << "-.-.-.-.-.-..-.-.--..-.-.-.-.-.-.-.-.-" << std::endl;
+      std::cout << (*next_merged_item_indices)[i] << std::endl;
     }
     heap_.erase(heap_.begin());
     return true;
