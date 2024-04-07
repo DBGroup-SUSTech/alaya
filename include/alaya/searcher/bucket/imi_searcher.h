@@ -46,21 +46,6 @@ struct IMISearcher : Searcher<IndexType, DataType> {
     printf("IMISearcher destructor\n");
   };
 
-  void print_subspaces_short_lists(std::vector<NearestSubspaceCentroids>* subspaces_short_lists) {
-    for (int index_subspaces_short_lists = 0;
-         index_subspaces_short_lists < subspaces_short_lists->size();
-         index_subspaces_short_lists++) {
-      printf("subspace : %d \n", index_subspaces_short_lists);
-      for (int index_cluster = 0;
-           index_cluster < subspaces_short_lists->at(index_subspaces_short_lists).size();
-           index_cluster++) {
-        printf("distance: %f ; id %d \n",
-               subspaces_short_lists->at(index_subspaces_short_lists).at(index_cluster).first,
-               subspaces_short_lists->at(index_subspaces_short_lists).at(index_cluster).second);
-      }
-    }
-  }
-
   inline float cal_distance(const DataType* query, Centroids centroids, int dimension) {
     Distance dis = 0;
     dis = L2Sqr<DataType>(query, centroids.data(), dimension);
@@ -84,7 +69,7 @@ struct IMISearcher : Searcher<IndexType, DataType> {
          subspace_indexer++) {
       fmt::println("subsapce {}", subspace_indexer);
       int start_dim = subspace_indexer * subspace_dimensions;
-      int final_dim = this->index_->vec_dim_;
+      int final_dim = start_dim + subspace_dimensions;
       if (final_dim > start_dim + subspace_dimensions) {
         final_dim = start_dim + subspace_dimensions;
       }
@@ -97,18 +82,17 @@ struct IMISearcher : Searcher<IndexType, DataType> {
       for (int cluster_index = 0; cluster_index < this->index_->bucket_num_; cluster_index++) {
         const DataType* sub_query = kQuery + start_dim;
         // const DataType* sub_query = query_ + start_dim;
-        dist = dist_func_(sub_query,
-                          this->index_->subspace_ivf_centroids_[subspace_indexer] +
-                              cluster_index * subspace_dimensions,
-                          final_dim - start_dim);
+        centroids_dist[subspace_indexer][cluster_index] =
+            dist_func_(sub_query,
+                       this->index_->subspace_ivf_centroids_[subspace_indexer] +
+                           cluster_index * subspace_dimensions,
+                       final_dim - start_dim);
         order[subspace_indexer][cluster_index] = cluster_index;
-        centroids_dist[subspace_indexer][cluster_index] = dist;
       }
       fmt::println("before sorting");
       // sort()
-      DataType* centroids_dist_tmp = centroids_dist[subspace_indexer];
       std::sort(order[subspace_indexer], order[subspace_indexer] + this->index_->bucket_num_,
-                [centroids_dist_tmp](int a, int b) {
+                [centroids_dist_tmp = centroids_dist[subspace_indexer]](int a, int b) {
                   return centroids_dist_tmp[a] < centroids_dist_tmp[b];
                 });
       std::sort(centroids_dist[subspace_indexer],
@@ -135,7 +119,6 @@ struct IMISearcher : Searcher<IndexType, DataType> {
   bool TraverseNextMultiIndexCell(const DataType* kQuery) {
     // std::vector<int> cell_coordinates;  是这个cell的坐标，通常大小为2
     std::vector<int> cell_inner_indices;
-    printf("print heap_: \n");
     merger_.print_heap();
     // merger.lists_ptr 就是查询向量在每个维度下按照距离排序过后的中心点id 和 距离  first 是距离
     // second 是id
@@ -143,7 +126,6 @@ struct IMISearcher : Searcher<IndexType, DataType> {
       printf("kong\n");
       return false;
     }
-    std::cout << "00000000000000000000000000000" << std::endl;
     for (int i = 0; i < cell_inner_indices.size(); ++i) {
       std::cout << cell_inner_indices[i] << "  ";
     }
@@ -154,11 +136,8 @@ struct IMISearcher : Searcher<IndexType, DataType> {
       cell_coordinates[list_index] =
           merger_.order_ptr->at(list_index)[cell_inner_indices[list_index]];
     }  // 定位坐标的，cluster的坐标，
-    printf("get global index\n");
     // 拿到global index  计算得到结果
     int global_index = this->index_->GetGlobalCellIndex(cell_coordinates);
-
-    printf("global_index: %d\n", global_index);
 
     IDType* id_pool = this->index_->id_buckets_.at(global_index);
     DataType* data_pool = this->index_->data_buckets_.at(global_index);
@@ -194,13 +173,6 @@ struct IMISearcher : Searcher<IndexType, DataType> {
     // printf("subspaces_short_lists.size():  %lu\n ",subspaces_short_lists.size());
     // printf("print short_list\n");
     // print_subspaces_short_lists(&subspaces_short_lists);
-
-    for (int i = 0; i < this->index_->subspace_cnt_; ++i) {
-      for (int j = 0; j < this->index_->bucket_num_; ++j) {
-        printf("order[%d][%d] = %d, centroids_dist[%d][%d] = %f\n", i, j, order[i][j], i, j,
-               centroids_dist[i][j]);
-      }
-    }
     merger_.setLists(order, centroids_dist, this->index_->bucket_num_);
     int found_neighbour_cnt = 0;
     bool traverse_next_cell = true;
@@ -227,7 +199,7 @@ struct IMISearcher : Searcher<IndexType, DataType> {
     res_ = new ResultPool<IDType, DataType>(this->index_->vec_num_, 2 * k, k);
     assert(query_dim == this->index_->vec_dim_ &&
            "Query dimension must be equal to data dimension.");
-
+    auto computer = template this->index_->GetComputer<this->index_->metric_type_>(query);
     GetNearestNeighbours(query, k);
   }
 };

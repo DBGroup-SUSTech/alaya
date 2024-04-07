@@ -445,6 +445,41 @@ struct InvertedMultiIndex : Index<DataType, IDType> {
     }
     return cell_num;
   }
+
+  template <MetricType metric>
+  struct Computer {
+    constexpr static auto dist_func_ = GetDistFunc<DataType, true>(metric);
+    std::vector<int*> order_;
+    std::vector<DataType*> centroids_dist_;
+    const InvertedMultiIndex& kImi_;
+
+    Computer(const InvertedMultiIndex& imi, const DataType* kQuery) : kImi_(imi) {
+      order_.resize(kImi_.subspace_cnt_);
+      centroids_dist_.resize(kImi_.subspace_cnt_);
+      int subspace_dim = kImi_.vec_dim_ / kImi_.subspace_cnt_;
+      for (int i = 0; i < kImi_.subspace_cnt_; ++i) {
+        order_[i] = (int*)Alloc64B(sizeof(int) * kImi_.bucket_num_);
+        centroids_dist_[i] = (DataType*)Alloc64B(sizeof(DataType) * kImi_.bucket_num_);
+        int start_dim = i * subspace_dim;
+        int final_dim = start_dim + subspace_dim;
+        for (int j = 0; j < kImi_.bucket_num_; ++j) {
+          centroids_dist_[i][j] =
+              dist_func_(kQuery + start_dim, kImi_.subspace_ivf_centroids_[i] + j * subspace_dim,
+                         subspace_dim);
+          order_[i][j] = j;
+        }
+        std::sort(order_[i], order_[i] + kImi_.bucket_num_,
+                  [centroids_dist = centroids_dist_[i]](int a, int b) {
+                    return centroids_dist[a] < centroids_dist[b];
+                  });
+        std::sort(centroids_dist_[i], centroids_dist_[i] + kImi_.bucket_num_);
+      }
+    }
+  };
+  template <MetricType m>
+  auto GetComputer(const DataType* kQuery) const {
+    return Computer<this->metric_type_>(*this, kQuery);
+  }
 };
 
 }  // namespace alaya
