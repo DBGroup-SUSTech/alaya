@@ -4,6 +4,7 @@ project(alaya VERSION 1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # find_program(CLANG_EXECUTABLE clang-17)  
 # if(NOT CLANG_EXECUTABLE)  
@@ -52,7 +53,7 @@ add_library(alaya
 target_link_libraries(alaya
   PUBLIC
   OpenMP::OpenMP_CXX
-  fmt
+  fmt::fmt
   faiss
 )
 target_include_directories(alaya
@@ -101,6 +102,16 @@ target_link_libraries(
 )
 
 add_executable(
+  ivf_test
+  tests/ivf_test.cpp
+)
+target_link_libraries(
+  ivf_test
+  alaya
+  GTest::gtest_main
+)
+
+add_executable(
   hello_test
   tests/hello_test.cpp
 )
@@ -112,6 +123,5 @@ target_link_libraries(
 include(GoogleTest)
 gtest_discover_tests(distance_test)
 gtest_discover_tests(pq_test)
+gtest_discover_tests(ivf_test)
 gtest_discover_tests(hello_test)
-
-
