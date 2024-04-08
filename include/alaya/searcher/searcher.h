@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "../index/index.h"
+#include "../utils/metric_type.h"
 #include "../utils/pool.h"
 
 namespace alaya {
@@ -14,13 +15,13 @@ namespace alaya {
  * @tparam IndexType
  * @tparam DataType
  */
-template <typename IndexType, typename QuantizerType, typename DataType = float>
+template <MetricType metric, typename IndexType, typename DataType = float>
 struct Searcher {
   const IndexType* index_ = nullptr;
-  const QuantizerType* quantizer_ = nullptr;
-
-  explicit Searcher(const IndexType* index, const QuantizerType* quantizer)
-      : index_(index), quantizer_(quantizer) {}
+  // const QuantizerType* quantizer_ = nullptr;
+  // int ef_;  //
+  // int nprobe_;  // Number of clusters to visit during search
+  explicit Searcher(const IndexType* index) : index_(index) {}
 
   // /**
   //  * @brief Set the index for the searcher
@@ -55,12 +56,28 @@ struct Searcher {
    * @param query_dim      Dimension of query vectors
    * @param queries        Input queries, size query_num * dimension
    * @param k              Number of search result
-   * @param distances      Output distances, size query_num * k
-   * @param labels         Output labels, size query_num * k
+   * @param distances      Output result distances, size query_num * k
+   * @param result_ids     Output result ids, size query_num * k
    */
-  virtual void Search(int64_t query_num, int64_t query_dim, const DataType* queries, int64_t k,
-                      DataType* distances, int64_t* labels
+  virtual void Search(const DataType* query, int64_t query_dim, int64_t k, DataType* distance,
+                      int64_t* result_id
                       // const SearchParameters* search_params = nullptr
+  ) const = 0;
+
+  /**
+   * @brief Search query_num query vectors on the index
+   *        return at most k distances and labels.
+   *
+   * @param query_num      Number of query vectors
+   * @param query_dim      Dimension of query vectors
+   * @param queries        Input queries, size query_num * dimension
+   * @param k              Number of search result
+   * @param distances      Output result distances, size query_num * k
+   * @param result_ids     Output result ids, size query_num * k
+   */
+  virtual void BatchSearch(int64_t query_num, int64_t query_dim, const DataType* queries, int64_t k,
+                           DataType* distances, int64_t* result_ids
+                           // const SearchParameters* search_params = nullptr
   ) const = 0;
 
   /**
