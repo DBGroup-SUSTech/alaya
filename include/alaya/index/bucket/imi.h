@@ -446,9 +446,9 @@ struct InvertedMultiIndex : Index<DataType, IDType> {
     return cell_num;
   }
 
-  template <MetricType metric>
+  // template <MetricType m>
   struct Computer {
-    constexpr static auto dist_func_ = GetDistFunc<DataType, true>(metric);
+    constexpr static auto dist_func_ = GetDistFunc<DataType, true>(this->metric_type_);
     std::vector<int*> order_;
     std::vector<DataType*> centroids_dist_;
     const InvertedMultiIndex& kImi_;
@@ -476,10 +476,8 @@ struct InvertedMultiIndex : Index<DataType, IDType> {
       }
     }
   };
-  template <MetricType m>
-  auto GetComputer(const DataType* kQuery) const {
-    return Computer<this->metric_type_>(*this, kQuery);
-  }
+  // template <MetricType m>
+  auto GetComputer(const DataType* kQuery) const { return Computer(*this, kQuery); }
 };
 
 }  // namespace alaya

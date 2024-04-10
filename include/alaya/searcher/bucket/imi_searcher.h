@@ -18,12 +18,12 @@ namespace alaya {
 template <typename DataType, typename IDType,
           typename IndexType = InvertedMultiIndex<DataType, IDType>>
 struct IMISearcher : Searcher<IndexType, DataType> {
-  using ClusterId = int;
-  using Distance = DataType;
-  using MergedItemIndices = std::vector<int>;
-  using NearestSubspaceCentroids = std::vector<std::pair<Distance, ClusterId>>;
-  using Coord = DataType;
-  using Centroids = std::vector<Coord>;
+  // using ClusterId = int;
+  // using Distance = DataType;
+  // using MergedItemIndices = std::vector<int>;
+  // using NearestSubspaceCentroids = std::vector<std::pair<Distance, ClusterId>>;
+  // using Coord = DataType;
+  // using Centroids = std::vector<Coord>;
 
   DistFunc<DataType, DataType, DataType> dist_func_;
 
@@ -45,12 +45,6 @@ struct IMISearcher : Searcher<IndexType, DataType> {
     }
     printf("IMISearcher destructor\n");
   };
-
-  inline float cal_distance(const DataType* query, Centroids centroids, int dimension) {
-    Distance dis = 0;
-    dis = L2Sqr<DataType>(query, centroids.data(), dimension);
-    return dis;
-  }
   // 这个方法是计算出每一个子空间中聚类中心到query点的距离，在这个方法里面已经做好排序了；返回的是一个vector，vector.size()对应的是子空间的个数：2（通常）。
   // 使用nth_element优化排序的过程
   void GetNearestSubspacesCentroids(const DataType* kQuery, std::vector<int*>& order,
@@ -199,7 +193,7 @@ struct IMISearcher : Searcher<IndexType, DataType> {
     res_ = new ResultPool<IDType, DataType>(this->index_->vec_num_, 2 * k, k);
     assert(query_dim == this->index_->vec_dim_ &&
            "Query dimension must be equal to data dimension.");
-    auto computer = template this->index_->GetComputer<this->index_->metric_type_>(query);
+    auto computer = this->index_->GetComputer(query);
     GetNearestNeighbours(query, k);
   }
 };
