@@ -1,18 +1,19 @@
 #include <alaya/utils/distance.h>
 #include <alaya/utils/kmeans.h>
+#include <alaya/utils/metric_type.h>
 #include <alaya/utils/random_utils.h>
 #include <faiss/Clustering.h>
 #include <faiss/IndexFlat.h>
 #include <fmt/core.h>
 
 #include <limits>
-
-#include "alaya/utils/metric_type.h"
+#include <vector>
 
 namespace alaya {
 
-std::vector<float> kmeans(const float* kData, const std::size_t kDataNum,
-                          const std::size_t kDataDim, unsigned cluster_num, MetricType metric) {
+std::vector<float> faiss_kmeans(const float* kData, const std::size_t kDataNum,
+                                const std::size_t kDataDim, unsigned cluster_num,
+                                MetricType metric) {
   faiss::Clustering cluster(kDataDim, cluster_num);
   if (metric == MetricType::IP) {
     faiss::IndexFlatIP ip_index(kDataDim);
@@ -26,7 +27,11 @@ std::vector<float> kmeans(const float* kData, const std::size_t kDataNum,
     throw std::runtime_error("Unsupported metric type");
   }
 
-  return cluster.centroids;
+  fmt::println("cluster size: {}", cluster.centroids.size());
+
+  std::vector<float> res = cluster.centroids;
+
+  return res;
 }
 
 void kmeans(const float* kData, const std::size_t kDataNum, const std::size_t kDataDim,

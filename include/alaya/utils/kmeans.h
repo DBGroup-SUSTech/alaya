@@ -7,7 +7,7 @@
 #include <limits>
 #include <vector>
 
-#include "alaya/utils/distance.h"
+#include "distance.h"
 #include "metric_type.h"
 
 namespace alaya {
@@ -43,8 +43,9 @@ std::vector<std::vector<IDType>> Assign(const DataType* kVecData, const IDType k
   return ids;
 }
 
-std::vector<float> kmeans(const float* kData, const std::size_t kDataNum,
-                          const std::size_t kDataDim, unsigned cluster_num, MetricType metric);
+std::vector<float> faiss_kmeans(const float* kData, const std::size_t kDataNum,
+                                const std::size_t kDataDim, unsigned cluster_num,
+                                MetricType metric);
 
 void kmeans(const float* kData, const std::size_t kDataNum, const std::size_t kDataDim,
             std::vector<std::vector<float>>& centroids, unsigned cluster_num,

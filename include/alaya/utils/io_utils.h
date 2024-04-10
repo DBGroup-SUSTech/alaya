@@ -40,12 +40,12 @@ DataType* LoadVecs(const char* kFileName, unsigned& num, unsigned& dim) {
   std::size_t fsize = (size_t)ss;
   num = (unsigned)(fsize / (dim + 1) / 4);
   fmt::println("Data number: {}, data dimension: {}", num, dim);
-  DataType* data = new DataType[num * dim * sizeof(float)];
+  DataType* data = new DataType[num * dim * sizeof(DataType)];
 
   in.seekg(0, std::ios::beg);
   for (size_t i = 0; i < num; i++) {
     in.seekg(4, std::ios::cur);
-    in.read((char*)(data + i * dim), dim * 4);
+    in.read((char*)(data + i * dim), dim * sizeof(DataType));
   }
   in.close();
   return data;
@@ -80,12 +80,12 @@ DataType* AlignLoadVecs(const char* kFileName, unsigned& num, unsigned& dim) {
   std::size_t fsize = (size_t)ss;
   num = (unsigned)(fsize / (tmp_dim + 1) / 4);
   fmt::println("Data number: {}, data dimension: {}, align dim: {}", num, tmp_dim, dim);
-  DataType* data = (DataType*)Alloc64B(std::size_t(num) * dim * sizeof(float));
+  DataType* data = (DataType*)Alloc64B(std::size_t(num) * dim * sizeof(DataType));
 
   in.seekg(0, std::ios::beg);
   for (size_t i = 0; i < num; i++) {
     in.seekg(4, std::ios::cur);
-    in.read((char*)(data + i * dim), dim * 4);
+    in.read((char*)(data + i * dim), tmp_dim * sizeof(DataType));
   }
   in.close();
   return data;

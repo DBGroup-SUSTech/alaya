@@ -268,7 +268,7 @@ DataType AlignL2Sqr(const DataType* kX, const DataType* kY, int dim) {
  * @return The distance function corresponding to the specified metric.
  */
 template <typename DataType, bool IsAlign>
-DistFunc<DataType, DataType, DataType> GetDistFunc(MetricType metric) {
+constexpr DistFunc<DataType, DataType, DataType> GetDistFunc(MetricType metric) {
   if constexpr (IsAlign == false) {
     if (metric == MetricType::L2) {
       return L2Sqr;
