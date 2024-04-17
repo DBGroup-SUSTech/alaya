@@ -143,15 +143,6 @@ target_link_libraries(
 
 include(GoogleTest)
 gtest_discover_tests(distance_test)
-<<<<<<< HEAD
-# gtest_discover_tests(pq_test)
-gtest_discover_tests(hello_test)
-
-gtest_discover_tests(bucket_test)
-
-
-=======
 gtest_discover_tests(pq_test)
 gtest_discover_tests(ivf_test)
 gtest_discover_tests(hello_test)
->>>>>>> master
