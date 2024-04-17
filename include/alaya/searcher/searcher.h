@@ -62,7 +62,7 @@ struct Searcher {
   virtual void Search(const DataType* query, int64_t query_dim, int64_t k, DataType* distance,
                       int64_t* result_id
                       // const SearchParameters* search_params = nullptr
-                      ) = 0;
+  ) const = 0;
 
   /**
    * @brief Search query_num query vectors on the index

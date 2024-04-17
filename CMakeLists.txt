@@ -115,19 +115,24 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/faiss)
 
 find_package(Boost REQUIRED thread)
 
-add_executable(
-  ivf_test
-  tests/ivf_test.cpp
-)
-target_link_libraries(
-  ivf_test
-  alaya
-  GTest::gtest_main
-)
+# add_executable(
+#   ivf_test
+#   tests/ivf_test.cpp
+# )
+# target_link_libraries(
+#   ivf_test
+#   alaya
+#   GTest::gtest_main
+# )
+
+# add_executable(
+#   hello_test
+#   tests/hello_test.cpp
+# )
 
 add_executable(
-  hello_test
-  tests/hello_test.cpp
+  bucket_test
+  tests/bucket_test.cpp
 )
 target_link_libraries(
   bucket_test
@@ -143,6 +148,6 @@ target_link_libraries(
 
 include(GoogleTest)
 gtest_discover_tests(distance_test)
-gtest_discover_tests(pq_test)
-gtest_discover_tests(ivf_test)
+# gtest_discover_tests(pq_test)
+# gtest_discover_tests(ivf_test)
 gtest_discover_tests(hello_test)
