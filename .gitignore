@@ -1,3 +1,7 @@
 build
 .history
 .cache
+cmake-build-debug
+.idea
+.vscode
+.VSCodeCounter

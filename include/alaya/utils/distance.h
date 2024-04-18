@@ -9,10 +9,17 @@
 #include "platform_macros.h"
 #include "sse_distance.h"
 
+#ifdef USE_MKL
+#include "mkl.h"
+#elif USE_BLAS
+#include <cblas.h>
+#endif
+
 namespace alaya {
 
 /**
- * Represents a function pointer type for calculating distance between two vectors.
+ * Represents a function pointer type for calculating distance between two
+ * vectors.
  *
  * @tparam T1 The type of elements in the first vector.
  * @tparam T2 The type of elements in the second vector.
@@ -60,7 +67,7 @@ UNROLL_END
  */
 UNROLL_BEGIN
 template <typename DataType>
-ALWAYS_INLINE DataType NaiveIp(const DataType* x, const DataType* y, int d) {
+ALWAYS_INLINE inline DataType NaiveIp(const DataType* x, const DataType* y, int d) {
   DataType dist = 0;
   for (int i = 0; i < d; ++i) {
     dist += x[i] * y[i];
@@ -177,13 +184,13 @@ inline float NormSqrFloat(const float* kX, int dim) {
 }
 
 ALWAYS_INLINE
-inline float NormSqrTFloat(const float* kX, int dim) {
+inline float NormFloat(const float* kX, int dim) {
 #if defined(USE_AVX512F)
-  return NormSqrTFloatAVX512(kX, dim);
+  return NormFloatAVX512(kX, dim);
 #elif defined(USE_AVX)
-  return NormSqrTFloatAVX(kX, dim);
+  return NormFloatAVX(kX, dim);
 #elif defined(USE_SSE)
-  return NormSqrTFloatSSE(kX, dim);
+  return NormFloatSSE(kX, dim);
 #else
   return NaiveGetNorm(kX, dim);
 #endif
@@ -193,7 +200,7 @@ inline float NormSqrTFloat(const float* kX, int dim) {
 template <typename DataType>
 DataType GetNorm(const DataType* kX, int dim) {
   if constexpr (std::is_same<DataType, float>::value) {
-    return NormSqrTFloat(kX, dim);
+    return NormFloat(kX, dim);
   } else {
     return NaiveGetNorm(kX, dim);
   }
@@ -204,16 +211,25 @@ DataType GetSqrNorm(const DataType* kX, int dim) {
   if constexpr (std::is_same<DataType, float>::value) {
     return NormSqrFloat(kX, dim);
   } else {
-    return NaiveGetNorm(kX, dim);
+    return NaiveGetSqrNorm(kX, dim);
   }
 }
 
 template <typename DataType>
 DataType InnerProduct(const DataType* kX, const DataType* kY, int dim) {
   if constexpr (std::is_same<DataType, float>::value) {
-    return InnerProductFloat(kX, kY, dim);
+    return -InnerProductFloat(kX, kY, dim);
   } else {
-    return NaiveIp(kX, kY, dim);
+    return -NaiveIp(kX, kY, dim);
+  }
+}
+
+template <typename DataType>
+DataType AlignInnerProduct(const DataType* kX, const DataType* kY, int dim) {
+  if constexpr (std::is_same<DataType, float>::value) {
+    return -AlignInnerProductFloat(kX, kY, dim);
+  } else {
+    return -NaiveIp(kX, kY, dim);
   }
 }
 
@@ -226,7 +242,6 @@ DataType L2Sqr(const DataType* kX, const DataType* kY, int dim) {
   }
 }
 
-template <typename DataType>
 /**
  * Calculates the squared L2 distance of two vectors aligned in 16 dimensions.
  *
@@ -235,6 +250,7 @@ template <typename DataType>
  * @param dim The dimension of the arrays.
  * @return The squared L2 distance between the two arrays.
  */
+template <typename DataType>
 DataType AlignL2Sqr(const DataType* kX, const DataType* kY, int dim) {
   if constexpr (std::is_same<DataType, float>::value) {
     return AlignL2SqrFloat(kX, kY, dim);
@@ -252,7 +268,7 @@ DataType AlignL2Sqr(const DataType* kX, const DataType* kY, int dim) {
  * @return The distance function corresponding to the specified metric.
  */
 template <typename DataType, bool IsAlign>
-auto GetDistFunc(MetricType metric) {
+constexpr DistFunc<DataType, DataType, DataType> GetDistFunc(MetricType metric) {
   if constexpr (IsAlign == false) {
     if (metric == MetricType::L2) {
       return L2Sqr;
@@ -270,6 +286,22 @@ auto GetDistFunc(MetricType metric) {
       return NaiveCos;
     }
   }
+}
+
+inline void Sgemv(const float* kVec, const float* kMat, float* res, const int kDim,
+                  const int kNum) {
+  cblas_sgemv(CblasRowMajor, CblasNoTrans, kNum, kDim, 1.0, kMat, kDim, kVec, 1, 0.0, res, 1);
+}
+
+inline void Sgemm(const float* mat1, const int dim1, const int n1, const float* mat2,
+                  const int dim2, const int n2, float* res) {
+  cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, n1, n2, dim1, 1.0, mat1, dim1, mat2, dim2,
+              0.0, res, n2);
+}
+
+inline void VecMatMul(const float* kVec, const float* kMat, float* res, const int kDim,
+                      const int kNum) {
+  // TODO Impl SIMD Vec Mat Mul
 }
 
 }  // namespace alaya
