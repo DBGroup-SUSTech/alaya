@@ -1,9 +1,9 @@
 #pragma once
 
 // #include <alaya/searcher/searcher.h>
-#include <alaya/utils/heap.h>
 #include <alaya/utils/kmeans.h>
 #include <alaya/utils/metric_type.h>
+#include <alaya/utils/pool.h>
 #include <sys/wait.h>
 
 #include <cstddef>
@@ -149,7 +149,7 @@ struct RQSearcher : Searcher<IndexType, DataType> {
       }
       for (int64_t i = 0; i < k; i++) {
         ans_dist[i] = pool.pool_[i].dis_;
-        ans_dist[i] = pool.pool_[i].id_;
+        ans_label[i] = pool.pool_[i].id_;
       }
     }
   }
