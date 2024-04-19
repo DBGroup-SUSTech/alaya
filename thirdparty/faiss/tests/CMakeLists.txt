@@ -50,17 +50,13 @@ if(FAISS_OPT_LEVEL STREQUAL "avx2")
   target_link_libraries(faiss_test PRIVATE faiss_avx2)
 endif()
 
-if(FAISS_OPT_LEVEL STREQUAL "avx512")
-  if(NOT WIN32)
-    target_compile_options(faiss_test PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-mavx2 -mfma -mavx512f -mavx512f -mavx512cd -mavx512vl -mavx512dq -mavx512bw>)
-  else()
-    target_compile_options(faiss_test PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/arch:AVX512>)
-  endif()
-  target_link_libraries(faiss_test PRIVATE faiss_avx512)
-endif()
+#
+#set(CMAKE_PREFIX_PATH "/usr/lib/x86_64-linux-gnu/")
+#set(GTest_DIR "/usr/lib/x86_64-linux-gnu/cmake")
 
 find_package(OpenMP REQUIRED)
-find_package(GTest CONFIG REQUIRED)
+#find_package(GTest CONFIG REQUIRED)
+find_package(GTest REQUIRED)
 
 target_link_libraries(faiss_test PRIVATE
   OpenMP::OpenMP_CXX

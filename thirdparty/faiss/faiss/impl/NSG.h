@@ -33,7 +33,7 @@ namespace faiss {
  *
  * This implementation is heavily influenced by the NSG
  * implementation by ZJULearning Group
- * (https://github.com/zjulearning/nsg)
+ * (https://github.com/zjulearning/nsglib)
  *
  * The NSG object stores only the neighbor link structure, see
  * IndexNSG.h for the full index object.
@@ -94,7 +94,7 @@ struct Graph {
 
 DistanceComputer* storage_distance_computer(const Index* storage);
 
-} // namespace nsg
+} // namespace nsglib
 
 struct NSG {
     /// internal storage of vectors (32 bits: this is expensive)

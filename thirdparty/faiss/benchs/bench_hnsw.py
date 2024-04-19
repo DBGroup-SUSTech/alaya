@@ -33,7 +33,7 @@ xt = ds.get_train()
 nq, d = xq.shape
 
 if todo == []:
-    todo = 'hnsw hnsw_sq ivf ivf_hnsw_quantizer kmeans kmeans_hnsw nsg'.split()
+    todo = 'hnsw hnsw_sq ivf ivf_hnsw_quantizer kmeans kmeans_hnsw nsglib'.split()
 
 
 def evaluate(index):
@@ -169,7 +169,7 @@ if 'kmeans_hnsw' in todo:
     index.hnsw.efSearch = 128
     clus.train(xb, index)
 
-if 'nsg' in todo:
+if 'nsglib' in todo:
 
     print("Testing NSG Flat")
 
