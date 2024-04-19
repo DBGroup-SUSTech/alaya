@@ -51,7 +51,7 @@ void IndexNSG::train(idx_t n, const float* x) {
     FAISS_THROW_IF_NOT_MSG(
             storage,
             "Please use IndexNSGFlat (or variants) instead of IndexNSG directly");
-    // nsg structure does not require training
+    // nsglib structure does not require training
     storage->train(n, x);
     is_trained = true;
 }
@@ -222,7 +222,7 @@ void IndexNSG::add(idx_t n, const float* x) {
     check_knn_graph(knng.data(), n, GK);
 
     if (verbose) {
-        printf("  nsg building\n");
+        printf("  nsglib building\n");
     }
 
     const nsg::Graph<idx_t> knn_graph(knng.data(), n, GK);

@@ -58,14 +58,18 @@ struct Quantizer : Index<DataType, IDType> {
    */
   virtual DataType* Decode(IDType data_id) { return nullptr; };
 
-  /**
-   * @brief Override the () operator, with the input parameter being the vector ID from the dataset,
-   * and the return value being the approximate distance obtained by looking up the Distance Table.
-   *
-   * @param vec_id The vector ID for looking up the approximate distnce.
-   * @return DataType
-   */
-  virtual DataType operator()(IDType vec_id) const = 0;
+//  /**
+//   * @brief Override the () operator, with the input parameter being the vector ID from the dataset,
+//   * and the return value being the approximate distance obtained by looking up the Distance Table.
+//   *
+//   * @param vec_id The vector ID for looking up the approximate distnce.
+//   * @return DataType
+//   */
+//  virtual DataType operator()(IDType vec_id) const = 0;
+
+  // 考虑到quantizer需要并发处理多个查询，对于每个查询，返回一个结构体
+  // 结构体提供“DataType operator()(IDType vec_id)”接口进行距离计算
+  auto get_computer(const DataType* query) const = 0;
 
   /**
    * @brief
