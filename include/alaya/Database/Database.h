@@ -5,16 +5,23 @@
 
 #pragma once
 
-#include <string>
+#include <alaya/Table/Table.h>
+#include <alaya/TableSchema/TableSchema.h>
+#include <sstream>
+#include <sqlite3.h>
 #include <map>
 #include <vector>
+#include <cstdio>
+#include <string.h>
+#include <string>
 
 namespace alaya {
 
+template <typename DataType>
 struct Database
 {
     std::string db_name_;                          ///< Name of the database
-    std::map<std::string, Table table> table_map_; ///< Mapping of table names to table objects
+    std::map<std::string, Table<DataType>> table_map_; ///< Mapping of table names to table objects
     std::vector<TableSchema> table_list_;          ///< List of the table objects
 
     /**
@@ -40,7 +47,7 @@ struct Database
      * @param table_name Name of the table
      * @param dim dimension of the vector
      */
-    void create_table(std::string table_name, int dim, char *des = NULL);
+    void create_table(std::string table_name, int dim, char *des);
 
     /**
      * @brief list all the tables in the database
@@ -54,7 +61,7 @@ struct Database
      * @param table_name Name of the table
      * @return Table* returned table object
      */
-    Table *use_table(string table_name);
+    Table<DataType> *use_table(std::string table_name);
 };
 
 }

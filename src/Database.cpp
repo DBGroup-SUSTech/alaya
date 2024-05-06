@@ -1,11 +1,11 @@
 #include <alaya/Database/Database.h>
-#include <alaya/Table/Table.h>
 #include <sstream>
 #include <sqlite3.h>
-#include <cstring>
+#include <string.h>
 #include <map>
 #include <vector>
 #include <cstdio>
+#include <iostream>
 
 namespace alaya {
 
@@ -14,7 +14,8 @@ namespace alaya {
     *
     * @param db_name Name of the database
     */
-void Database::drop_database(std::string db_name) {
+template <typename DataType>
+void Database<DataType>::drop_database(std::string db_name) {
     db_name+=".db";
     if (std::remove(db_name.c_str()) == 0) {
         std::cout << "Successfully drop database" << std::endl;
@@ -31,22 +32,25 @@ void Database::drop_database(std::string db_name) {
     * @param table_name Name of the table
     * @param dim dimension of the vector
     */
-void create_table(std::string table_name, int dim, char *des = NULL)
-{
-    alaya::Table table = new alaya::Table(table_name, dim);
-    table_map_.append(table_name, table);
 
-    alaya::TableSchema table_schema = new alaya::TableSchema(table_name, dim, des, 0);
-    table_list_.append(table_schema);
+template <typename DataType>
+void Database<DataType>::create_table(std::string table_name, int dim, char *des)
+{
+    Table<DataType> table = new alaya::Table<DataType>(table_name, dim);
+    Database<DataType>::table_map_.append(table_name, table);
+
+    TableSchema table_schema = new alaya::TableSchema(table_name, dim, des, 0);
+    Database<DataType>::table_list_.push_back(table_schema);
 }
 
 /**
     * @brief list all the tables in the database
     *
     */
-void show_tables() {
-    for(auto &t : table_map_){
-        cout<<t.first<<"\t";
+template <typename DataType>
+void Database<DataType>::show_tables() {
+    for(auto &t : Database<DataType>::table_map_){
+        std::cout<<t.first<<"\t";
     }
 }
 
@@ -56,6 +60,8 @@ void show_tables() {
     * @param table_name Name of the table
     * @return Table* returned table object
     */
-Table *use_table(string table_name) { return *(table_map_[table_name]); }
+   
+template <typename DataType>
+Table<DataType>* Database<DataType>::use_table(std::string table_name) { return *(Database<DataType>::table_map_[table_name]); }
 
 }

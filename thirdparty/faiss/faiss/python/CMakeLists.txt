@@ -72,7 +72,7 @@ swig_add_library(swigfaiss
   LANGUAGE python
   SOURCES swigfaiss.swig
 )
-set_property(TARGET swigfaiss PROPERTY SWIG_COMPILE_OPTIONS -doxygen)
+set_property(TARGET swigfaiss PROPERTY SWIG_COMPILE_OPTIONS )
 
 set_property(SOURCE swigfaiss_avx2.swig
   PROPERTY SWIG_MODULE_NAME swigfaiss_avx2)

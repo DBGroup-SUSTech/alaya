@@ -51,6 +51,8 @@ add_library(alaya
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/kmeans.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/random_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/TableSchema.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Database.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Table.cpp
 )
 target_link_libraries(alaya
   PUBLIC
@@ -74,7 +76,7 @@ else()
   target_link_libraries(alaya PUBLIC ${BLAS_LIBRARIES})
 endif()
 
-# add_subdirectory(tests)
+add_subdirectory(tests)
 
 # add_executable(test_RQ test_RQ.cpp)
 # target_link_libraries(test_RQ alaya)
@@ -83,15 +85,15 @@ endif()
 # target_link_libraries(test_main alaya)
 
 enable_testing()
-add_executable(
-  distance_test
-  tests/distance_test.cpp
-)
-target_link_libraries(
-  distance_test
-  alaya
-  GTest::gtest_main
-)
+# add_executable(
+#   distance_test
+#   tests/distance_test.cpp
+# )
+# target_link_libraries(
+#   distance_test
+#   alaya
+#   GTest::gtest_main
+# )
 
 add_executable(
   pq_test
@@ -128,5 +130,8 @@ target_link_libraries(
 
 
 include(GoogleTest)
-gtest_discover_tests(distance_test)
+# gtest_discover_tests(distance_test)
 gtest_discover_tests(hello_test)
+gtest_discover_tests(tableschema_test)
+gtest_discover_tests(pq_test)
+gtest_discover_tests(ivf_test)
