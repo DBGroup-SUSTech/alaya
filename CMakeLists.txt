@@ -44,6 +44,8 @@ add_compile_options(-lsqlite3)
 
 find_package(OpenMP REQUIRED)
 
+add_subdirectory(include/DisComm)
+
 add_subdirectory(thirdparty)
 
 add_library(alaya
