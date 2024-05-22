@@ -64,7 +64,7 @@ DistanceComputer* storage_distance_computer(const Index* storage) {
     }
 }
 
-} // namespace nsg
+} // namespace nsglib
 
 using namespace nsg;
 

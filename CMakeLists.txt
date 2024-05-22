@@ -53,6 +53,8 @@ add_library(alaya
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/kmeans.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/random_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/TableSchema.cpp
+        include/alaya/index/graph/nsglib/utils.h
+        include/alaya/index/quantizer/normal_quantizer.h
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Database.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Table.cpp
 )
@@ -67,7 +69,8 @@ target_include_directories(alaya
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-find_package(MKL)
+#find_package(MKL)
+find_package(MKL CONFIG REQUIRED)
 if(MKL_FOUND)
   message(STATUS "MKL found")
   add_compile_definitions(USE_MKL)
@@ -87,15 +90,16 @@ add_subdirectory(tests)
 # target_link_libraries(test_main alaya)
 
 enable_testing()
-# add_executable(
-#   distance_test
-#   tests/distance_test.cpp
-# )
-# target_link_libraries(
-#   distance_test
-#   alaya
-#   GTest::gtest_main
-# )
+add_executable(
+  distance_test
+  tests/distance_test.cpp
+        tests/graph_test.cpp
+)
+target_link_libraries(
+  distance_test
+  alaya
+  GTest::gtest_main
+)
 
 add_executable(
   pq_test
@@ -124,6 +128,7 @@ target_link_libraries(tableschema_test SQLite::SQLite3)
 add_executable(
   hello_test
   tests/hello_test.cpp
+        t_main.cpp
 )
 target_link_libraries(
   hello_test
