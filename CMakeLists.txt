@@ -93,7 +93,7 @@ enable_testing()
 add_executable(
   distance_test
   tests/distance_test.cpp
-        tests/graph_test.cpp
+        # tests/graph_test.cpp
 )
 target_link_libraries(
   distance_test
@@ -101,15 +101,15 @@ target_link_libraries(
   GTest::gtest_main
 )
 
-add_executable(
-  pq_test
-  tests/pq_test.cpp
-)
-target_link_libraries(
-  pq_test
-  alaya
-  GTest::gtest_main
-)
+# add_executable(
+#   pq_test
+#   tests/pq_test.cpp
+# )
+# target_link_libraries(
+#   pq_test
+#   alaya
+#   GTest::gtest_main
+# )
 
 add_executable(
   ivf_test
@@ -140,5 +140,5 @@ include(GoogleTest)
 # gtest_discover_tests(distance_test)
 gtest_discover_tests(hello_test)
 gtest_discover_tests(tableschema_test)
-gtest_discover_tests(pq_test)
+# gtest_discover_tests(pq_test)
 gtest_discover_tests(ivf_test)

@@ -26,8 +26,11 @@ else(MPI_FOUND)
 	message(FATAL_ERROR "[Find MPI]: NO")
 endif(MPI_FOUND)
 
+
+find_package(BLAS)
+add_compile_definitions(USE_BLAS)
 add_executable(DisComm main.cpp)
-target_link_libraries(DisComm ${MPI_LIBRARIES} alaya)
+target_link_libraries(DisComm PUBLIC alaya ${MPI_LIBRARIES} ${BLAS_LIBRARIES})
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

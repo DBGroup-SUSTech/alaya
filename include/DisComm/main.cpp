@@ -24,30 +24,6 @@ int main(int argc, char** argv)
         uint32_t query_buffer_capacity = (q_num * q_dim * sizeof(float) + 2 * sizeof(size_t)) * 2;
         uint32_t result_buffer_capacity = (K * 30 * q_num * sizeof(float) + 2 * sizeof(size_t)) * 1.2;
 
-        // filter一直是空的，可以暂时先不管。
-        // bool filtered_search = false;
-        // if (!query_filters.empty())
-        // {
-        //     filtered_search = true;
-        //     if (query_filters.size() != 1 && query_filters.size() != q_num)
-        //     {
-        //         std::cout << "Error. Mismatch in number of queries and size of query "
-        //                      "filters file"
-        //                   << std::endl;
-        //         return -1; // To return -1 or some other error handling?
-        //     }
-        // }
-
-        // bool calc_recall_flag = false;
-        // if (gt_file != std::string("null") && gt_file != std::string("NULL") && file_exists(gt_file))
-        // {
-        //     diskann::load_truthset(gt_file, gt_ids, gt_dists, gt_num, gt_dim);
-        //     if (gt_num != q_num)
-        //     {
-        //         diskann::cout << "Error. Mismatch in number of queries and ground truth data" << std::endl;
-        //     }
-        //     calc_recall_flag = true;
-        // }
         auto s = std::chrono::high_resolution_clock::now();
         Message::MessageQueue<char> *msgq0 =
             new Message::MessageQueue<char>(query_buffer_capacity, result_buffer_capacity);
@@ -84,39 +60,12 @@ int main(int argc, char** argv)
         msgq0->recvMessage<uint32_t>(1, result_id0, result_num0, result_dim0, IDX);
         msgq0->recvMessage<float>(1, distance0, result_num0, result_dim0, DIST);
 
-        // if constexpr (DEBUG)
-        // {
-        //     Msg_warn("result_num and result_dim is: %zu, %zu...", Lvec.size(), K * q_num);
-        //     for (int test_id = 0; test_id < Lvec.size(); test_id++)
-        //     {
-        //         for (int j = 0; j < K * q_num; ++j)
-        //         {
-        //             Msg_major("after recv before vector in pro 1: result_id[%d][%d] = %d", test_id, j,
-        //                       result_id0[test_id][j]);
-        //         }
-        //     }
-        // }
-
-        // auto after_recv1 = std::chrono::high_resolution_clock::now();
-        // std::chrono::duration<double> recv1_time = after_recv1 - after_recv2;
-        // Msg_warn("----------------------recv 3 time is: %f", recv1_time.count());
-
-        // assert(result_num0 == result_num1);
-        // assert(result_num1 == result_num2);
-
-        //= result merge
         std::vector<std::vector<uint32_t>> res_id(result_num0);
         std::vector<std::vector<float>> res_dist(result_num0);
 
-        // int lastLvec = Lvec.size() - 1;
+
         merge_to_vector1<uint32_t, float, uint32_t, float>(res_id, res_dist, result_id0, distance0, result_num0,
                                                            result_dim0);
-
-        // for (int ids_index = 0; ids_index < K; ++ids_index)
-        // {
-        //     Msg_info("after merge result_id in Lvec %d, is: %d, and its dist is: %f", lastLvec,
-        //              res_id[lastLvec][ids_index], );
-        // }
         merge_to_vector2<uint32_t, float, uint32_t, float>(res_id, res_dist, result_id1, distance1, result_num0,
                                                            result_dim0);
         merge_to_vector3<uint32_t, float, uint32_t, float>(res_id, res_dist, result_id2, distance2, result_num0,
@@ -157,47 +106,47 @@ int main(int argc, char** argv)
 
     else
     {
-        // try
-        // {
-        unsigned K = 10;
-        uint32_t query_buffer_capacity = (1000 * 960 * sizeof(float) + 2 * sizeof(size_t)) * 2;
-        uint32_t result_buffer_capacity = (K * 30 * 1000 * sizeof(float) + 2 * sizeof(size_t)) * 1.2;
+        // // try
+        // // {
+        // unsigned K = 10;
+        // uint32_t query_buffer_capacity = (1000 * 960 * sizeof(float) + 2 * sizeof(size_t)) * 2;
+        // uint32_t result_buffer_capacity = (K * 30 * 1000 * sizeof(float) + 2 * sizeof(size_t)) * 1.2;
 
-        Message::MessageQueue<char> *msgq1 =
-            new Message::MessageQueue<char>(result_buffer_capacity, query_buffer_capacity);
-        size_t query_num, query_dim = 0;
-        float* recv_query = nullptr;
-        float* distance = new float[K];
-        int64_t* result_id = new int64_t[K];
+        // Message::MessageQueue<char> *msgq1 =
+        //     new Message::MessageQueue<char>(result_buffer_capacity, query_buffer_capacity);
+        // size_t query_num, query_dim = 0;
+        // float* recv_query = nullptr;
+        // float* distance = new float[K];
+        // int64_t* result_id = new int64_t[K];
 
-        msgq1->recvMessage(0, recv_query, query_num, query_dim, QUERY);
+        // msgq1->recvMessage(0, recv_query, query_num, query_dim, QUERY);
 
-        std::string netflix_path = "/dataset/netflix";
-        unsigned d_num, d_dim, q_num, q_dim;
-        float* data = alaya::LoadVecs<float>(fmt::format("{}/netflix_base.fvecs", netflix_path).c_str(),
-                                            d_num, d_dim);
-        float* query = alaya::AlignLoadVecs<float>(
-            fmt::format("{}/netflix_query.fvecs", netflix_path).c_str(), q_num, q_dim);
-        fmt::println("d_num: {}, d_dim: {}, q_num: {}, q_dim: {}", d_num, d_dim, q_num, q_dim);
-        unsigned bucket_num = 100;
-        alaya::IVF<float> ivf(d_dim, alaya::MetricType::L2, bucket_num);
+        // std::string netflix_path = "/dataset/netflix";
+        // unsigned d_num, d_dim, q_num, q_dim;
+        // float* data = alaya::LoadVecs<float>(fmt::format("{}/netflix_base.fvecs", netflix_path).c_str(),
+        //                                     d_num, d_dim);
+        // float* query = alaya::AlignLoadVecs<float>(
+        //     fmt::format("{}/netflix_query.fvecs", netflix_path).c_str(), q_num, q_dim);
+        // fmt::println("d_num: {}, d_dim: {}, q_num: {}, q_dim: {}", d_num, d_dim, q_num, q_dim);
+        // unsigned bucket_num = 100;
+        // alaya::IVF<float> ivf(d_dim, alaya::MetricType::L2, bucket_num);
 
-        ivf.BuildIndex(d_num, data);
+        // ivf.BuildIndex(d_num, data);
 
-        alaya::IvfSearcher<alaya::MetricType::L2, float> searcher(&ivf);
+        // alaya::IvfSearcher<alaya::MetricType::L2, float> searcher(&ivf);
 
-        searcher.SetNprobe(10);
+        // searcher.SetNprobe(10);
 
-        searcher.Search(query, q_dim, K, distance, result_id);
+        // searcher.Search(query, q_dim, K, distance, result_id);
 
-        for (auto i = 0; i < K; ++i) {
-            fmt::println("distance: {}, result_id: {}", distance[i], result_id[i]);
-        }
+        // for (auto i = 0; i < K; ++i) {
+        //     fmt::println("distance: {}, result_id: {}", distance[i], result_id[i]);
+        // }
 
-        msgq1->sendMessage<int64_t>(0, &result_id, 30, K * query_num, IDX);
-        msgq1->sendMessage<float>(0, &distance, 30, K * query_num, DIST);
-        delete[] distance;
-        delete[] result_id;
+        // msgq1->sendMessage<int64_t>(0, &result_id, 30, K * query_num, IDX);
+        // msgq1->sendMessage<float>(0, &distance, 30, K * query_num, DIST);
+        // delete[] distance;
+        // delete[] result_id;
 
     } // end of serverId()=1
 
