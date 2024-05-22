@@ -27,7 +27,7 @@ else(MPI_FOUND)
 endif(MPI_FOUND)
 
 add_executable(DisComm main.cpp)
-target_link_libraries(DisComm ${MPI_LIBRARIES})
+target_link_libraries(DisComm ${MPI_LIBRARIES} alaya)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
