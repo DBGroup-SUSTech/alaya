@@ -2,13 +2,12 @@
 #include <alaya/searcher/ivf_searcher.h>
 #include <alaya/utils/io_utils.h>
 #include <alaya/utils/metric_type.h>
+#include <alaya/utils/tsc_timer.h>
+#include <alaya/utils/recall_utils.h>
 #include <gtest/gtest.h>
 
 #include <vector>
 
-#include "alaya/utils/distance.h"
-#include "alaya/utils/random_utils.h"
-#include "fmt/core.h"
 
 constexpr float kDeltaFloat = 1e-3;
 
@@ -75,40 +74,18 @@ TEST(IvfTest, BuildIndex) {
       }
     }
   }
-
-  // for (auto i = 0; i < 10; ++i) {
-  //   auto bucket_id = alaya::GenRandInt(0, bucket_num - 1);
-  //   unsigned bucket_size = *((unsigned*)ivf.id_buckets_[bucket_id]);
-  //   fmt::println("bucket id:{}, bucket size: {}", bucket_id, bucket_size);
-  //   std::vector<float> vec(d_dim, 0);
-  //   for (auto j = 0; j < bucket_size; ++j) {
-  //     alaya::AddAssign(ivf.data_buckets_[bucket_id] + j * ivf.align_dim_, vec.data(), d_dim);
-  //   }
-  //   for (auto j = 0; j < d_dim; ++j) {
-  //     vec[j] /= bucket_size;
-  //     fmt::print("dim {}, avg_vec {}: centriods {}\n", j, vec[j],
-  //                ivf.centroids_[bucket_id * ivf.align_dim_ + j]);
-  //     EXPECT_TRUE(std::abs(vec[j] - ivf.centroids_[bucket_id * ivf.align_dim_ + j]) <
-  //     kDeltaFloat);
-  //   }
-  // }
 }
 
 TEST(IvfTest, Search) {
   std::string netflix_path = "/dataset/netflix";
   unsigned d_num, d_dim, q_num, q_dim;
-  // float *data, *query;
-  // alaya::LoadVecsDataset(netflix_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
-  // alaya::AlignLoadVecsDataset(netflix_path.c_str(), data, d_num, d_dim, query, q_num, q_dim);
   float* data = alaya::LoadVecs<float>(fmt::format("{}/netflix_base.fvecs", netflix_path).c_str(),
                                        d_num, d_dim);
   float* query = alaya::AlignLoadVecs<float>(
       fmt::format("{}/netflix_query.fvecs", netflix_path).c_str(), q_num, q_dim);
   fmt::println("d_num: {}, d_dim: {}, q_num: {}, q_dim: {}", d_num, d_dim, q_num, q_dim);
 
-  // unsigned ad_num, ad_dim;
-  // float* a_data = alaya::AlignLoadVecs<float>(
-  //     fmt::format("{}/netflix_base.fvecs", netflix_path).c_str(), ad_num, ad_dim);
+  float* gt_val = alaya::LoadDistGt<float>(fmt::format("{}/netflix_L2@1000.vgt", netflix_path));
 
   unsigned bucket_num = 100;
   alaya::IVF<float> ivf(d_dim, alaya::MetricType::L2, bucket_num);
@@ -118,16 +95,58 @@ TEST(IvfTest, Search) {
   alaya::IvfSearcher<alaya::MetricType::L2, float> searcher(&ivf);
 
   unsigned k = 10;
-  float* distance = new float[k];
-  int64_t* result_id = new int64_t[k];
+  float* distance = new float[q_num * k];
+  int64_t* result_id = new int64_t[q_num * k];
 
   searcher.SetNprobe(10);
 
-  searcher.Search(query, q_dim, k, distance, result_id);
-
-  for (auto i = 0; i < k; ++i) {
-    fmt::println("distance: {}, result_id: {}", distance[i], result_id[i]);
+#pragma omp parallel for
+  for (auto q=0; q<q_num; ++q) {
+    searcher.Search(query + q * q_dim, k, distance + q * k, result_id + q * k);
   }
+
+  float recall = alaya::CalRecallByVal<float>(distance, q_num, k, gt_val, 1000);
+
+  fmt::println("recall: {}", recall);
+
+
+  delete[] distance;
+  delete[] result_id;
+}
+
+TEST(IvfTest, test) {
+  unsigned bucket_num = 100;
+  std::unique_ptr ivf = std::make_unique<alaya::IVF<float>>(300, alaya::MetricType::L2, 100);
+  std::string netflix_path = "/dataset/netflix";
+  unsigned d_num, d_dim, q_num, q_dim;
+  float* data = alaya::LoadVecs<float>(fmt::format("{}/netflix_base.fvecs", netflix_path).c_str(),
+                                       d_num, d_dim);
+  float* query = alaya::AlignLoadVecs<float>(
+      fmt::format("{}/netflix_query.fvecs", netflix_path).c_str(), q_num, q_dim);
+  fmt::println("d_num: {}, d_dim: {}, q_num: {}, q_dim: {}", d_num, d_dim, q_num, q_dim);
+
+  float* gt_val = alaya::LoadDistGt<float>(fmt::format("{}/netflix_L2@1000.vgt", netflix_path));
+
+  ivf->BuildIndex(d_num, data);
+
+  fmt::println("metric: {}", (int)alaya::kMetricMap["L2"]);
+
+  std::unique_ptr searcher = std::make_unique<alaya::IvfSearcher<alaya::kMetricMap["L2"], float>>(ivf.get());
+
+  unsigned k = 10;
+  float* distance = new float[q_num * k];
+  int64_t* result_id = new int64_t[q_num * k];
+
+  searcher->SetNprobe(10);
+
+#pragma omp parallel for
+  for (auto q=0; q<q_num; ++q) {
+    searcher->Search(query + q * q_dim, k, distance + q * k, result_id + q * k);
+  }
+
+  float recall = alaya::CalRecallByVal<float>(distance, q_num, k, gt_val, 1000);
+
+  fmt::println("recall: {}", recall);
 
   delete[] distance;
   delete[] result_id;
