@@ -8,6 +8,26 @@
 
 namespace alaya {
 
+template <typename DataType=float>
+struct SearcherBase {
+  /**
+   * @brief Search query_num query vectors on the index
+   *        return at most k distances and labels.
+   *
+   * @param query_num      Number of query vectors
+   * @param queries        Input queries, size query_num * dimension
+   * @param k              Number of search result
+   * @param distances      Output result distances, size query_num * k
+   * @param result_ids     Output result ids, size query_num * k
+   */
+  virtual void Search(const DataType* query, int64_t k, DataType* distance,
+                      int64_t* result_id
+                      // const SearchParameters* search_params = nullptr
+  ) const = 0;
+
+  virtual ~SearcherBase() = default;
+};
+
 /**
  * @brief A unified abstract class for search-related functions
  * with an index as a member variable.
@@ -16,7 +36,7 @@ namespace alaya {
  * @tparam DataType
  */
 template <MetricType metric, typename IndexType, typename DataType = float>
-struct Searcher {
+struct Searcher : public SearcherBase<DataType> {
   const IndexType* index_ = nullptr;
   // const QuantizerType* quantizer_ = nullptr;
   // int ef_;  //
@@ -53,13 +73,12 @@ struct Searcher {
    *        return at most k distances and labels.
    *
    * @param query_num      Number of query vectors
-   * @param query_dim      Dimension of query vectors
    * @param queries        Input queries, size query_num * dimension
    * @param k              Number of search result
    * @param distances      Output result distances, size query_num * k
    * @param result_ids     Output result ids, size query_num * k
    */
-  virtual void Search(const DataType* query, int64_t query_dim, int64_t k, DataType* distance,
+  virtual void Search(const DataType* query, int64_t k, DataType* distance,
                       int64_t* result_id
                       // const SearchParameters* search_params = nullptr
   ) const = 0;

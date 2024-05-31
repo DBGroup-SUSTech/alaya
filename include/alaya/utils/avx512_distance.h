@@ -1,6 +1,6 @@
 #pragma once
 
-#include "alaya/utils/sse_distance.h"
+#include "sse_distance.h"
 #include "platform_macros.h"
 
 #if defined(USE_AVX512F)

@@ -2,8 +2,8 @@
 #include <alaya/utils/kmeans.h>
 #include <alaya/utils/metric_type.h>
 #include <alaya/utils/random_utils.h>
-#include <faiss/Clustering.h>
-#include <faiss/IndexFlat.h>
+// #include <faiss/Clustering.h>
+// #include <faiss/IndexFlat.h>
 #include <fmt/core.h>
 
 #include <limits>
@@ -15,19 +15,21 @@ std::vector<float> faiss_kmeans(const float* kData, const std::size_t kDataNum,
                                 const std::size_t kDataDim, unsigned cluster_num,
                                 MetricType metric) {
   faiss::Clustering cluster(kDataDim, cluster_num);
+  cluster.verbose = true;
   if (metric == MetricType::IP) {
     faiss::IndexFlatIP ip_index(kDataDim);
-    ip_index.add(kDataNum, kData);
+    // ip_index.add(kDataNum, kData);
     cluster.train(kDataNum, kData, ip_index);
   } else if (metric == MetricType::L2 || metric == MetricType::COS) {
     faiss::IndexFlatL2 l2_index(kDataDim);
-    l2_index.add(kDataNum, kData);
+    // l2_index.add(kDataNum, kData);
     cluster.train(kDataNum, kData, l2_index);
   } else {
     throw std::runtime_error("Unsupported metric type");
   }
 
-  fmt::println("cluster size: {}", cluster.centroids.size());
+  fmt::println("cluster size: {} = {}(cluster_num ) * {}(dim)",
+               cluster.centroids.size(), cluster_num, kDataDim);
 
   std::vector<float> res = cluster.centroids;
 

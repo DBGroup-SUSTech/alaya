@@ -22,7 +22,7 @@ struct IvfSearcher : Searcher<metric, IVF<DataType, IDType>, DataType> {
   // void SetNprobe(int n) override {}
   void SetNprobe(int n) { nprobe_ = n; }
 
-  void Search(const DataType* query, int64_t query_dim, int64_t k, DataType* distance,
+  void Search(const DataType* query, int64_t k, DataType* distance,
               int64_t* result_id) const override {
     auto computer = this->index_->template GetComputer<metric>(query);
 
@@ -49,7 +49,7 @@ struct IvfSearcher : Searcher<metric, IVF<DataType, IDType>, DataType> {
   ) const override {
 #pragma omp parallel for schedule(dynamic)
     for (std::size_t q = 0; q < query_num; ++q) {
-      Search(queries + q * query_dim, query_dim, k, distances + q * k, result_ids + q * k);
+      Search(queries + q * query_dim, k, distances + q * k, result_ids + q * k);
     }
   }  // BatchSearch
 };

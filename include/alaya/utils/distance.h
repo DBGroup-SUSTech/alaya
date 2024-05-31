@@ -78,7 +78,7 @@ UNROLL_END
 
 UNROLL_BEGIN
 template <typename DataType>
-ALWAYS_INLINE DataType NaiveGetSqrNorm(const DataType* kX, int d) {
+ALWAYS_INLINE inline DataType NaiveGetSqrNorm(const DataType* kX, int d) {
   DataType norm = 0;
   for (int i = 0; i < d; ++i) {
     norm += kX[i] * kX[i];
@@ -87,21 +87,21 @@ ALWAYS_INLINE DataType NaiveGetSqrNorm(const DataType* kX, int d) {
 }
 UNROLL_END
 
-UNROLL_BEGIN
+// UNROLL_BEGIN
 template <typename DataType>
-ALWAYS_INLINE DataType NaiveGetNorm(const DataType* kX, int d) {
+ALWAYS_INLINE inline DataType NaiveGetNorm(const DataType* kX, int d) {
   return std::sqrt(NaiveGetSqrNorm(kX, d));
 }
-UNROLL_END
+// UNROLL_END
 
-UNROLL_BEGIN
+// UNROLL_BEGIN
 template <typename DataType>
 DataType NaiveCos(const DataType* kX, const DataType* kY, int d) {
   DataType norm_x = NaiveGetNorm(kX, d);
   DataType norm_y = NaiveGetNorm(kX, d);
-  return NaiveIp(kX, kY, d) / (norm_x * norm_y);
+  return -NaiveIp(kX, kY, d) / (norm_x * norm_y);
 }
-UNROLL_END
+// UNROLL_END
 
 UNROLL_BEGIN
 template <typename DataType>
@@ -288,20 +288,49 @@ constexpr DistFunc<DataType, DataType, DataType> GetDistFunc(MetricType metric) 
   }
 }
 
-inline void Sgemv(const float* kVec, const float* kMat, float* res, const int kDim,
-                  const int kNum) {
-  cblas_sgemv(CblasRowMajor, CblasNoTrans, kNum, kDim, 1.0, kMat, kDim, kVec, 1, 0.0, res, 1);
+/**
+ * @brief Returns the distance function based on the specified metric.
+ *
+ * This function returns a distance function based on the specified metric.
+ *
+ * @param metric The metric type used to determine the distance function.
+ * @return The distance function corresponding to the specified metric.
+ */
+template <typename DataType, bool IsAlign>
+constexpr DistFunc<DataType, DataType, DataType> GetDistFunc(const std::string& metric) {
+  if constexpr (IsAlign == false) {
+    if (metric == "L2") {
+      return L2Sqr;
+    } else if (metric == "IP") {
+      return InnerProduct;
+    } else {
+      return NaiveCos;
+    }
+  } else {
+    if (metric == "L2") {
+      return AlignL2Sqr;
+    } else if (metric == "IP") {
+      return AlignInnerProductFloat;
+    } else {
+      return NaiveCos;
+    }
+  }
 }
 
-inline void Sgemm(const float* mat1, const int dim1, const int n1, const float* mat2,
-                  const int dim2, const int n2, float* res) {
-  cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, n1, n2, dim1, 1.0, mat1, dim1, mat2, dim2,
-              0.0, res, n2);
-}
+// inline void Sgemv(const float* kVec, const float* kMat, float* res, const int kDim,
+//                   const int kNum) {
+//   cblas_sgemv(CblasRowMajor, CblasNoTrans, kNum, kDim, 1.0, kMat, kDim, kVec, 1, 0.0, res, 1);
+// }
 
-inline void VecMatMul(const float* kVec, const float* kMat, float* res, const int kDim,
-                      const int kNum) {
-  // TODO Impl SIMD Vec Mat Mul
-}
+// inline void Sgemm(const float* mat1, const int dim1, const int n1, const float* mat2,
+//                   const int dim2, const int n2, float* res) {
+//   cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, n1, n2, dim1, 1.0, mat1, dim1, mat2, dim2,
+//               0.0, res, n2);
+// }
+
+// inline void VecMatMul(const float* kVec, const float* kMat, float* res, const int kDim,
+//                       const int kNum) {
+//   // TODO Impl SIMD Vec Mat Mul
+// }
 
 }  // namespace alaya

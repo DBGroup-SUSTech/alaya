@@ -1,6 +1,6 @@
 #pragma once
 
-#include <faiss/Clustering.h>
+// #include <faiss/Clustering.h>
 #include <fmt/core.h>
 
 #include <algorithm>
@@ -14,6 +14,7 @@
 #include "../../utils/io_utils.h"
 #include "../../utils/kmeans.h"
 #include "../../utils/memory.h"
+#include "../../utils/metric_type.h"
 #include "../../utils/platform_macros.h"
 #include "../index.h"
 
@@ -28,6 +29,13 @@ struct IVF : Index<DataType, IDType> {
 
   IVF() = default;
 
+  IVF(int dim, const std::string& kMetric, int bucket_num)
+      : Index<DataType, IDType>(dim, kAlgin16, kMetric),
+        bucket_num_(bucket_num),
+        dist_func_(GetDistFunc<DataType, false>(kMetricMap[kMetric])),
+        data_buckets_(bucket_num, nullptr),
+        id_buckets_(bucket_num, nullptr) {}
+
   IVF(int dim, MetricType metric, int bucket_num)
       : Index<DataType, IDType>(dim, kAlgin16, metric),
         bucket_num_(bucket_num),
@@ -37,8 +45,6 @@ struct IVF : Index<DataType, IDType> {
 
   void BuildIndex(IDType vec_num, const DataType* kVecData) override {
     this->vec_num_ = vec_num;
-    // data_buckets_.resize(bucket_num_);
-    // id_buckets_.resize(bucket_num_);
 
     std::vector<std::vector<IDType>> ids;
     std::vector<float> centroids;
@@ -166,10 +172,6 @@ struct IVF : Index<DataType, IDType> {
       }
       std::sort(order_, order_ + kIvf_.bucket_num_,
                 [this](IDType a, IDType b) { return centroids_dist_[a] < centroids_dist_[b]; });
-      // fmt::println("\n\n");
-      // for (auto i = 0; i < kIvf_.bucket_num_; ++i) {
-      //   fmt::println("i:{}, order:{}, dist: {}", i, order_[i], centroids_dist_[order_[i]]);
-      // }
     }
 
     ALWAYS_INLINE
