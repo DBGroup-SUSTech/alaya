@@ -23,6 +23,7 @@ include_dirs = [
     '../include/alaya/utils',
     '../thirdparty/faiss',
     '../thirdparty/fmt/include/',
+    '../thirdparty/pybind/include',
 ]
 
 bindings_dir = 'python'
