@@ -29,7 +29,7 @@ struct MetricMap {
   //   __builtin_unreachable();
   // }
 
-  static constexpr MetricType operator[](std::string_view str) {
+  static constexpr MetricType operator[](const std::string_view& str) {
     for (const auto& [key, val] : kStaticMap) {
       if (key == str) {
         return val;
@@ -42,7 +42,7 @@ struct MetricMap {
 
 inline constexpr MetricMap kMetricMap{};
 
-// static_assert(kMetricMap["L2"] == MetricType::L2);
+static_assert(kMetricMap["L2"] == MetricType::L2);
 
 // inline constexpr static std::unordered_map<std::string, MetricType> kMetricMap = {
 //     {"L2", MetricType::L2},

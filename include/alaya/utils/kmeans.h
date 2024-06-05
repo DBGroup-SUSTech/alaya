@@ -7,6 +7,9 @@
 #include <limits>
 #include <vector>
 
+#include <faiss/Clustering.h>
+#include <faiss/IndexFlat.h>
+
 #include "distance.h"
 #include "metric_type.h"
 
@@ -46,6 +49,28 @@ std::vector<std::vector<IDType>> Assign(const DataType* kVecData, const IDType k
 std::vector<float> faiss_kmeans(const float* kData, const std::size_t kDataNum,
                                 const std::size_t kDataDim, unsigned cluster_num,
                                 MetricType metric);
+//                                  {
+//   faiss::Clustering cluster(kDataDim, cluster_num);
+//   cluster.verbose = true;
+//   if (metric == MetricType::IP) {
+//     faiss::IndexFlatIP ip_index(kDataDim);
+//     // ip_index.add(kDataNum, kData);
+//     cluster.train(kDataNum, kData, ip_index);
+//   } else if (metric == MetricType::L2 || metric == MetricType::COS) {
+//     faiss::IndexFlatL2 l2_index(kDataDim);
+//     // l2_index.add(kDataNum, kData);
+//     cluster.train(kDataNum, kData, l2_index);
+//   } else {
+//     throw std::runtime_error("Unsupported metric type");
+//   }
+
+//   fmt::println("cluster size: {} = {}(cluster_num ) * {}(dim)",
+//                cluster.centroids.size(), cluster_num, kDataDim);
+
+//   std::vector<float> res = cluster.centroids;
+
+//   return res;
+// }
 
 void kmeans(const float* kData, const std::size_t kDataNum, const std::size_t kDataDim,
             std::vector<std::vector<float>>& centroids, unsigned cluster_num,

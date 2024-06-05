@@ -59,7 +59,6 @@ inline int32_t ReduceAddI8x32(__m256i x) {
  * @param dim The dimension of the arrays.
  * @return The inner product of the two arrays.
  */
-UNROLL_BEGIN
 inline float InnerProductFloatAVX(const float* kX, const float* kY, int dim) {
   __m256 sum256 = _mm256_setzero_ps();
 
@@ -71,8 +70,7 @@ inline float InnerProductFloatAVX(const float* kX, const float* kY, int dim) {
     sum256 = _mm256_fmadd_ps(x256, y256, sum256);
     dim -= 8;
   }
-  __m128 sum128 = _mm_add_ps(_mm256_castps256_ps128(sum256),
-                             _mm256_extractf128_ps(sum256, 1));
+  __m128 sum128 = _mm_add_ps(_mm256_castps256_ps128(sum256), _mm256_extractf128_ps(sum256, 1));
   __m128 x128, y128;
 
   if (dim >= 4) {
@@ -91,7 +89,6 @@ inline float InnerProductFloatAVX(const float* kX, const float* kY, int dim) {
   }
   return ReduceAddF32x4(sum128);
 }
-UNROLL_END
 
 /**
  * Calculates the inner product of two aligned float arrays using AVX
@@ -102,9 +99,7 @@ UNROLL_END
  * @param dim The dimension of the arrays.
  * @return The inner product of the two aligned arrays.
  */
-UNROLL_BEGIN
-inline float AlignInnerProductFloatAVX(const float* kX, const float* kY,
-                                       int dim) {
+inline float AlignInnerProductFloatAVX(const float* kX, const float* kY, int dim) {
   __m256 sum256 = _mm256_setzero_ps();
 
   const float* kEnd = kX + dim;
@@ -118,7 +113,6 @@ inline float AlignInnerProductFloatAVX(const float* kX, const float* kY,
   }
   return ReduceAddF32x8(sum256);
 }
-UNROLL_END
 
 /**
  * Calculates the squared L2 distance between two float arrays using AVX
@@ -129,7 +123,6 @@ UNROLL_END
  * @param dim The dimension of the arrays.
  * @return The squared L2 distance between the two arrays.
  */
-UNROLL_BEGIN
 inline float L2SqrFloatAVX(const float* kX, const float* kY, int dim) {
   __m256 sum256 = _mm256_setzero_ps();
 
@@ -142,8 +135,7 @@ inline float L2SqrFloatAVX(const float* kX, const float* kY, int dim) {
     sum256 = _mm256_fmadd_ps(diff256, diff256, sum256);
     dim -= 8;
   }
-  __m128 sum128 = _mm_add_ps(_mm256_castps256_ps128(sum256),
-                             _mm256_extractf128_ps(sum256, 1));
+  __m128 sum128 = _mm_add_ps(_mm256_castps256_ps128(sum256), _mm256_extractf128_ps(sum256, 1));
   __m128 mx128, my128, diff128;
 
   if (dim >= 4) {
@@ -164,7 +156,6 @@ inline float L2SqrFloatAVX(const float* kX, const float* kY, int dim) {
   }
   return ReduceAddF32x4(sum128);
 }
-UNROLL_END
 
 /**
  * Calculates the squared L2 distance between two align float arrays using AVX
@@ -175,7 +166,6 @@ UNROLL_END
  * @param dim The dimension of the arrays.
  * @return The squared L2 distance between the two align float arrays.
  */
-UNROLL_BEGIN
 inline float AlignL2SqrFloatAVX(const float* kX, const float* kY, int dim) {
   __m256 sum256 = _mm256_setzero_ps();
 
@@ -191,9 +181,7 @@ inline float AlignL2SqrFloatAVX(const float* kX, const float* kY, int dim) {
   }
   return ReduceAddF32x8(sum256);
 }
-UNROLL_END
 
-UNROLL_BEGIN
 inline float NormSqrFloatAVX(const float* kX, int dim) {
   __m256 sum256 = _mm256_setzero_ps();
   __m256 x256;
@@ -204,8 +192,7 @@ inline float NormSqrFloatAVX(const float* kX, int dim) {
     sum256 = _mm256_fmadd_ps(x256, x256, sum256);
     dim -= 8;
   }
-  __m128 sum128 = _mm_add_ps(_mm256_castps256_ps128(sum256),
-                             _mm256_extractf128_ps(sum256, 1));
+  __m128 sum128 = _mm_add_ps(_mm256_castps256_ps128(sum256), _mm256_extractf128_ps(sum256, 1));
   __m128 x128;
 
   if (dim >= 4) {
@@ -221,13 +208,9 @@ inline float NormSqrFloatAVX(const float* kX, int dim) {
   }
   return ReduceAddF32x4(sum128);
 }
-UNROLL_END
 
-inline float NormFloatAVX(const float* kX, int dim) {
-  return std::sqrt(NormSqrFloatAVX(kX, dim));
-}
+inline float NormFloatAVX(const float* kX, int dim) { return std::sqrt(NormSqrFloatAVX(kX, dim)); }
 
-UNROLL_BEGIN
 inline float AlignNormSqrFloatAVX(const float* pV, int dim) {
   __m256 sum256 = _mm256_setzero_ps();
   __m256 x256;
@@ -240,7 +223,6 @@ inline float AlignNormSqrFloatAVX(const float* pV, int dim) {
   }
   return ReduceAddF32x8(sum256);
 }
-UNROLL_END
 
 inline float AlignNormFloatAVX(const float* pV, int dim) {
   return std::sqrt(NormSqrFloatAVX(pV, dim));

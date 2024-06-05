@@ -1,13 +1,11 @@
 #include <alaya/index/quantizer/product_quantizer.h>
 #include <alaya/utils/io_utils.h>
 #include <alaya/utils/metric_type.h>
+#include <alaya/utils/random_utils.h>
 #include <gtest/gtest.h>
 
 #include <algorithm>
 #include <iterator>
-
-#include "alaya/utils/random_utils.h"
-#include "gtest/gtest.h"
 
 TEST(ProductQuantizerTest, Constructor) {
   unsigned d_num = 1000;

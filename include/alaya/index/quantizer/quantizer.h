@@ -24,7 +24,7 @@ struct Quantizer : Index<DataType, IDType> {
   unsigned book_num_;                ///<
   CodeType* codes_ = nullptr;        ///< Line id for codebook
   std::vector<DataType*> codebook_;  ///<
-  DataType* code_dist_ = nullptr;    ///<
+  DataType* code_dist_ = nullptr;    ///< 不放在 index 中放在查询相关的 struct 中
 
   Quantizer() = default;
 
