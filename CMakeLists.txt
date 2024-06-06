@@ -1,17 +1,10 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.26)
 
-project(alaya VERSION 1.0 LANGUAGES CXX)
+project(alaya VERSION 0.1 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-# find_program(CLANG_EXECUTABLE clang-17)  
-# if(NOT CLANG_EXECUTABLE)  
-#     message(FATAL_ERROR "Clang 17 not found")  
-# endif()
-
-# set(CMAKE_CXX_COMPILER ${CLANG_EXECUTABLE})
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   add_compile_options(-stdlib=libc++) 
@@ -19,7 +12,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   link_libraries(c++)
 endif()
 
-find_package(SQLite3 REQUIRED)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  add_compile_options(-g -O0)
+else()
+  add_compile_options(-O3)
+endif()
 
 include(FetchContent)
 
@@ -31,16 +28,26 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-FetchContent_Declare(
-    fmt
-    URL https://github.com/fmtlib/fmt/releases/download/10.2.1/fmt-10.2.1.zip
-    DOWNLOAD_EXTRACT_TIMESTAMP true
-)
-FetchContent_MakeAvailable(fmt)
+# FetchContent_Declare(
+#     fmt
+#     URL https://github.com/fmtlib/fmt/releases/download/10.2.1/fmt-10.2.1.zip
+#     DOWNLOAD_EXTRACT_TIMESTAMP true
+# )
+# FetchContent_MakeAvailable(fmt)
+
+# FetchContent_Declare(
+#   pybind11
+#   GIT_REPOSITORY https://github.com/pybind/pybind11.git
+#   GIT_TAG v2.12
+#   DOWNLOAD_EXTRACT_TIMESTAMP true
+# )
+# FetchContent_MakeAvailable(pybind11)
 
 add_compile_options(-march=native)
 
 add_compile_options(-lsqlite3)
+
+add_compile_options(-fPIC)
 
 find_package(OpenMP REQUIRED)
 
@@ -53,6 +60,7 @@ add_library(alaya
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/kmeans.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/random_utils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/TableSchema.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/python/bindings.cpp
         include/alaya/index/graph/nsglib/utils.h
         include/alaya/index/quantizer/normal_quantizer.h
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Database.cpp
@@ -67,6 +75,16 @@ target_link_libraries(alaya
 target_include_directories(alaya
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+
+add_executable(
+  cal_gt
+  src/cal_gt.cpp
+)
+target_link_libraries(
+  cal_gt
+  alaya
 )
 
 #find_package(MKL)
