@@ -37,8 +37,8 @@ ext_modules = [
         include_dirs=include_dirs,
         libraries=["faiss", "fmt",],
         library_dirs=['../build/thirdparty/faiss/faiss/Release', '../build/thirdparty/fmt/Release'],
-        extra_compile_args=['-std=c++20', '-fPIC', '-march=native', '-O3'],
-        extra_link_args=['-std=c++20'],
+        extra_compile_args=['-std=c++20', '-fPIC', '-fopenmp', '-march=native', '-O3'],
+        extra_link_args=['-std=c++20', '-fopenmp', '-lmkl_rt', '-liomp5'],
         define_macros=[('VERSION_INFO', __version__)],
         cxx_std=20,
     ),
@@ -50,6 +50,7 @@ setup(
     description='',
     author='DBGroup@SUSTech',
     ext_modules=ext_modules,
+    # install_requires=['numpy'],
     cmdclass={'build_ext': CustomBuildExt},
     # cmdclass={'build_ext': build_ext},
 )

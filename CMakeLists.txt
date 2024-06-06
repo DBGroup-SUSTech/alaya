@@ -74,14 +74,14 @@ target_include_directories(alaya
 )
 
 
-add_executable(
-  cal_gt
-  src/cal_gt.cpp
-)
-target_link_libraries(
-  cal_gt
-  alaya
-)
+# add_executable(
+#   cal_gt
+#   src/cal_gt.cpp
+# )
+# target_link_libraries(
+#   cal_gt
+#   alaya
+# )
 
 #find_package(MKL)
 find_package(MKL CONFIG REQUIRED)
@@ -95,7 +95,7 @@ else()
   target_link_libraries(alaya PUBLIC ${BLAS_LIBRARIES})
 endif()
 
-add_subdirectory(python)
+# add_subdirectory(python)
 
 enable_testing()
 add_executable(
